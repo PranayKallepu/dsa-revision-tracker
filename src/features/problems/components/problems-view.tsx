@@ -3,7 +3,16 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, Search } from "lucide-react"
-import { Button, Card, Input, Select } from "@/components/ui"
+import {
+  Button,
+  Card,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui"
 import { ProblemsTable } from "./problems-table"
 import { useProblems } from "@/hooks/use-problems"
 import type { Problem } from "@/types/problem"
@@ -60,15 +69,16 @@ export function ProblemsView({ items: propItems, setScreen }: ProblemsViewProps)
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <Select
-          className="sm:w-40"
-          value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value)}
-        >
-          <option>All</option>
-          <option>Easy</option>
-          <option>Medium</option>
-          <option>Hard</option>
+        <Select value={difficulty} onValueChange={setDifficulty}>
+          <SelectTrigger className="sm:w-40">
+            <SelectValue placeholder="Difficulty" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All</SelectItem>
+            <SelectItem value="Easy">Easy</SelectItem>
+            <SelectItem value="Medium">Medium</SelectItem>
+            <SelectItem value="Hard">Hard</SelectItem>
+          </SelectContent>
         </Select>
         <Button onClick={handleAddProblem}>
           <Plus className="size-4" />

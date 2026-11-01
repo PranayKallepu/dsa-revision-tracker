@@ -18,6 +18,10 @@ import {
   Input,
   Label,
   Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
 } from "@/components/ui"
 import type { Screen } from "@/types/navigation"
@@ -146,10 +150,15 @@ export function MasteryTest({ setScreen }: MasteryTestProps) {
                 </div>
                 <div>
                   <Label>Confidence</Label>
-                  <Select>
-                    <option>High — fully independent</option>
-                    <option>Medium — some uncertainty</option>
-                    <option>Low — struggled significantly</option>
+                  <Select defaultValue="high">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select confidence" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">High — fully independent</SelectItem>
+                      <SelectItem value="medium">Medium — some uncertainty</SelectItem>
+                      <SelectItem value="low">Low — struggled significantly</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
               </div>

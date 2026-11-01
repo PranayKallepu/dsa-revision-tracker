@@ -3,7 +3,18 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Check, Code2 } from "lucide-react"
-import { Button, Card, Input, Label, Select, Textarea } from "@/components/ui"
+import {
+  Button,
+  Card,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/components/ui"
 import { useProblems } from "@/hooks/use-problems"
 import type { Problem } from "@/types/problem"
 import type { Screen } from "@/types/navigation"
@@ -90,18 +101,28 @@ export function ProblemForm({ addProblem: propAddProblem, setScreen }: ProblemFo
           <div>
             <Label>Platform</Label>
             <Select defaultValue="LeetCode">
-              <option>LeetCode</option>
-              <option>GeeksforGeeks</option>
-              <option>Codeforces</option>
-              <option>Other</option>
+              <SelectTrigger>
+                <SelectValue placeholder="Select platform" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="LeetCode">LeetCode</SelectItem>
+                <SelectItem value="GeeksforGeeks">GeeksforGeeks</SelectItem>
+                <SelectItem value="Codeforces">Codeforces</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
             </Select>
           </div>
           <div>
             <Label>Difficulty</Label>
             <Select defaultValue="Medium">
-              <option>Easy</option>
-              <option>Medium</option>
-              <option>Hard</option>
+              <SelectTrigger>
+                <SelectValue placeholder="Select difficulty" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Easy">Easy</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="Hard">Hard</SelectItem>
+              </SelectContent>
             </Select>
           </div>
           <div className="sm:col-span-2">
