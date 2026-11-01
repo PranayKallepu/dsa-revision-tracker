@@ -1,5 +1,13 @@
 import { Search } from "lucide-react"
-import { Card, Input, Select } from "@/components/ui"
+import {
+  Card,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui"
 import { activities } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 
@@ -11,11 +19,16 @@ export function ActivityHistory() {
           <Search className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" />
           <Input className="pl-10" placeholder="Search activity…" />
         </div>
-        <Select className="sm:w-48" defaultValue="All activity">
-          <option>All activity</option>
-          <option>Revisions</option>
-          <option>Problems</option>
-          <option>Mastery tests</option>
+        <Select defaultValue="All activity">
+          <SelectTrigger className="sm:w-48">
+            <SelectValue placeholder="Filter activity" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All activity">All activity</SelectItem>
+            <SelectItem value="Revisions">Revisions</SelectItem>
+            <SelectItem value="Problems">Problems</SelectItem>
+            <SelectItem value="Mastery tests">Mastery tests</SelectItem>
+          </SelectContent>
         </Select>
       </div>
       <div className="p-5">
