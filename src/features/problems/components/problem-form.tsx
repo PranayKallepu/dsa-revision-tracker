@@ -1,18 +1,33 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, Check, Code2 } from "lucide-react"
 import { Button, Card, Input, Label, Select, Textarea } from "@/components/ui"
+import { useProblems } from "@/hooks/use-problems"
 import type { Problem } from "@/types/problem"
 import type { Screen } from "@/types/navigation"
 
 export interface ProblemFormProps {
-  addProblem: (p: Problem) => void
-  setScreen: (s: Screen) => void
+  addProblem?: (p: Problem) => void
+  setScreen?: (s: Screen) => void
 }
 
-export function ProblemForm({ addProblem, setScreen }: ProblemFormProps) {
+export function ProblemForm({ addProblem: propAddProblem, setScreen }: ProblemFormProps) {
+  const router = useRouter()
+  const { addProblem: contextAddProblem } = useProblems()
+  const addProblem = propAddProblem || contextAddProblem
+
   const [title, setTitle] = useState("")
+
+  const handleBack = () => {
+    if (setScreen) {
+      setScreen("problems")
+    } else {
+      router.push("/problems")
+    }
+  }
+
   const save = () => {
     if (!title.trim()) return
     addProblem({
@@ -27,15 +42,16 @@ export function ProblemForm({ addProblem, setScreen }: ProblemFormProps) {
       revision: 0,
       time: 0,
     })
-    setScreen("problems")
+    handleBack()
   }
+
   return (
     <div className="mx-auto max-w-4xl space-y-5">
       <div className="flex items-center gap-3">
         <Button
           variant="outline"
           size="icon"
-          onClick={() => setScreen("problems")}
+          onClick={handleBack}
         >
           <ArrowLeft className="size-4" />
         </Button>
@@ -130,7 +146,7 @@ export function ProblemForm({ addProblem, setScreen }: ProblemFormProps) {
         </div>
       </Card>
       <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={() => setScreen("problems")}>
+        <Button variant="outline" onClick={handleBack}>
           Cancel
         </Button>
         <Button onClick={save}>

@@ -1,3 +1,6 @@
+"use client"
+
+import { useRouter } from "next/navigation"
 import { MoreHorizontal } from "lucide-react"
 import { Badge, Button } from "@/components/ui"
 import { DifficultyBadge } from "@/components/shared/difficulty-badge"
@@ -5,10 +8,20 @@ import type { Problem } from "@/types/problem"
 
 export interface ProblemsTableProps {
   items: Problem[]
-  onDetails: () => void
+  onDetails?: (id?: number) => void
 }
 
 export function ProblemsTable({ items, onDetails }: ProblemsTableProps) {
+  const router = useRouter()
+
+  const handleDetails = (id: number) => {
+    if (onDetails) {
+      onDetails(id)
+    } else {
+      router.push(`/problems/${id}`)
+    }
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[820px] text-left text-sm">
@@ -26,7 +39,10 @@ export function ProblemsTable({ items, onDetails }: ProblemsTableProps) {
           {items.map((p) => (
             <tr key={p.id} className="hover:bg-muted/40">
               <td className="px-5 py-4">
-                <button className="text-left" onClick={onDetails}>
+                <button
+                  className="text-left"
+                  onClick={() => handleDetails(p.id)}
+                >
                   <div className="font-semibold">{p.title}</div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {p.platform}
@@ -60,7 +76,11 @@ export function ProblemsTable({ items, onDetails }: ProblemsTableProps) {
                 {p.nextRevision}
               </td>
               <td className="px-4 py-4">
-                <Button variant="ghost" size="icon" onClick={onDetails}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDetails(p.id)}
+                >
                   <MoreHorizontal className="size-4" />
                 </Button>
               </td>

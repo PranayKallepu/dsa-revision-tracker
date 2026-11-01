@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   ArrowRight,
   BrainCircuit,
@@ -24,17 +25,38 @@ import { cn } from "@/lib/utils"
 import type { Screen } from "@/types/navigation"
 
 export interface RevisionWorkspaceProps {
-  setScreen: (s: Screen) => void
+  setScreen?: (s: Screen) => void
 }
 
 export function RevisionWorkspace({ setScreen }: RevisionWorkspaceProps) {
+  const router = useRouter()
+
+  const navigate = (screen: Screen) => {
+    if (setScreen) {
+      setScreen(screen)
+    } else {
+      const routes: Record<Screen, string> = {
+        dashboard: "/dashboard",
+        problems: "/problems",
+        add: "/problems/new",
+        details: "/problems",
+        revision: "/revisions",
+        mastery: "/mastery",
+        analytics: "/analytics",
+        activity: "/activity",
+        archived: "/archived",
+      }
+      router.push(routes[screen])
+    }
+  }
+
   const [revealed, setRevealed] = useState(false)
   const [rated, setRated] = useState(false)
 
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-5 flex items-center justify-between">
-        <Button variant="ghost" onClick={() => setScreen("dashboard")}>
+        <Button variant="ghost" onClick={() => navigate("dashboard")}>
           <X className="size-4" />
           Exit session
         </Button>
@@ -178,7 +200,7 @@ export function RevisionWorkspace({ setScreen }: RevisionWorkspaceProps) {
                     <CheckCircle2 className="size-4" />
                     Saved. Next review in 15 days.
                   </span>
-                  <Button onClick={() => setScreen("dashboard")}>
+                  <Button onClick={() => navigate("dashboard")}>
                     Next problem <ArrowRight className="size-4" />
                   </Button>
                 </div>

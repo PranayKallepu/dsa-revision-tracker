@@ -1,18 +1,24 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Plus, Search } from "lucide-react"
 import { Button, Card, Input, Select } from "@/components/ui"
 import { ProblemsTable } from "./problems-table"
+import { useProblems } from "@/hooks/use-problems"
 import type { Problem } from "@/types/problem"
 import type { Screen } from "@/types/navigation"
 
 export interface ProblemsViewProps {
-  items: Problem[]
-  setScreen: (s: Screen) => void
+  items?: Problem[]
+  setScreen?: (s: Screen) => void
 }
 
-export function ProblemsView({ items, setScreen }: ProblemsViewProps) {
+export function ProblemsView({ items: propItems, setScreen }: ProblemsViewProps) {
+  const router = useRouter()
+  const { items: contextItems } = useProblems()
+  const items = propItems || contextItems
+
   const [query, setQuery] = useState("")
   const [difficulty, setDifficulty] = useState("All")
   const filtered = useMemo(
@@ -25,6 +31,22 @@ export function ProblemsView({ items, setScreen }: ProblemsViewProps) {
       ),
     [items, query, difficulty],
   )
+
+  const handleAddProblem = () => {
+    if (setScreen) {
+      setScreen("add")
+    } else {
+      router.push("/problems/new")
+    }
+  }
+
+  const handleDetails = (id?: number) => {
+    if (setScreen) {
+      setScreen("details")
+    } else if (id) {
+      router.push(`/problems/${id}`)
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -48,7 +70,7 @@ export function ProblemsView({ items, setScreen }: ProblemsViewProps) {
           <option>Medium</option>
           <option>Hard</option>
         </Select>
-        <Button onClick={() => setScreen("add")}>
+        <Button onClick={handleAddProblem}>
           <Plus className="size-4" />
           Add problem
         </Button>
@@ -65,7 +87,7 @@ export function ProblemsView({ items, setScreen }: ProblemsViewProps) {
       <Card className="overflow-hidden">
         <ProblemsTable
           items={filtered}
-          onDetails={() => setScreen("details")}
+          onDetails={handleDetails}
         />
         <div className="flex items-center justify-between border-t p-4 text-sm text-muted-foreground">
           <span>Showing {filtered.length} of 148 problems</span>
