@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   ArrowRight,
   Check,
@@ -22,10 +23,20 @@ import {
 import type { Screen } from "@/types/navigation"
 
 export interface MasteryTestProps {
-  setScreen: (s: Screen) => void
+  setScreen?: (s: Screen) => void
 }
 
 export function MasteryTest({ setScreen }: MasteryTestProps) {
+  const router = useRouter()
+
+  const navigate = (screen: Screen) => {
+    if (setScreen) {
+      setScreen(screen)
+    } else {
+      router.push("/dashboard")
+    }
+  }
+
   const [started, setStarted] = useState(false)
   const [complete, setComplete] = useState(false)
 
@@ -53,7 +64,7 @@ export function MasteryTest({ setScreen }: MasteryTestProps) {
             <div className="text-xs text-muted-foreground">Complexity</div>
           </div>
         </Card>
-        <Button className="mt-6" onClick={() => setScreen("dashboard")}>
+        <Button className="mt-6" onClick={() => navigate("dashboard")}>
           Return to dashboard
         </Button>
       </div>

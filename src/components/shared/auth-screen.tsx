@@ -1,22 +1,37 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowRight, CheckCircle2, Command, Sparkles } from "lucide-react"
 import { Badge, Button, Card, Input, Label } from "@/components/ui"
 import { Brand } from "@/components/layout/brand"
 
 export interface AuthScreenProps {
-  close: () => void
+  close?: () => void
+  initialMode?: "login" | "register"
 }
 
-export function AuthScreen({ close }: AuthScreenProps) {
-  const [register, setRegister] = useState(false)
+export function AuthScreen({ close, initialMode = "login" }: AuthScreenProps) {
+  const [register, setRegister] = useState(initialMode === "register")
+  const router = useRouter()
+
+  const handleSubmit = () => {
+    if (close) {
+      close()
+    } else {
+      router.push("/dashboard")
+    }
+  }
+
   return (
     <div className="grid min-h-screen bg-white lg:grid-cols-2">
       <div className="relative hidden overflow-hidden bg-slate-950 p-12 text-white lg:flex lg:flex-col">
         <div className="absolute -right-24 -top-24 size-96 rounded-full bg-primary/30 blur-3xl" />
         <div className="relative">
-          <Brand />
+          <Link href="/dashboard" className="inline-block transition-opacity hover:opacity-90">
+            <Brand />
+          </Link>
         </div>
         <div className="relative my-auto max-w-xl">
           <Badge className="mb-6 bg-white/10 text-white">
@@ -55,7 +70,9 @@ export function AuthScreen({ close }: AuthScreenProps) {
       <div className="flex items-center justify-center bg-background p-6">
         <Card className="w-full max-w-md border-0 p-7 shadow-xl shadow-slate-900/10 sm:p-9">
           <div className="mb-8 lg:hidden">
-            <Brand />
+            <Link href="/dashboard" className="inline-block">
+              <Brand />
+            </Link>
           </div>
           <div className="text-2xl font-bold">
             {register ? "Create your account" : "Welcome back"}
@@ -93,7 +110,7 @@ export function AuthScreen({ close }: AuthScreenProps) {
                 At least 8 characters with one number
               </div>
             )}
-            <Button className="w-full" size="lg" onClick={close}>
+            <Button className="w-full" size="lg" onClick={handleSubmit}>
               {register ? "Create account" : "Sign in"}
               <ArrowRight className="size-4" />
             </Button>
@@ -103,18 +120,28 @@ export function AuthScreen({ close }: AuthScreenProps) {
             OR
             <div className="h-px flex-1 bg-border" />
           </div>
-          <Button className="w-full" variant="outline">
+          <Button className="w-full" variant="outline" onClick={handleSubmit}>
             <Command className="size-4" />
             Continue with Google
           </Button>
           <div className="mt-7 text-center text-sm text-muted-foreground">
             {register ? "Already have an account?" : "New to DSA Mastery?"}
-            <button
-              className="ml-1 font-semibold text-primary"
-              onClick={() => setRegister(!register)}
-            >
-              {register ? "Sign in" : "Create an account"}
-            </button>
+            {close ? (
+              <button
+                className="ml-1 font-semibold text-primary"
+                onClick={() => setRegister(!register)}
+              >
+                {register ? "Sign in" : "Create an account"}
+              </button>
+            ) : (
+              <Link
+                className="ml-1 font-semibold text-primary"
+                href={register ? "/login" : "/register"}
+                onClick={() => setRegister(!register)}
+              >
+                {register ? "Sign in" : "Create an account"}
+              </Link>
+            )}
           </div>
         </Card>
       </div>

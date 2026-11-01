@@ -1,4 +1,13 @@
-import { ArrowRight, CalendarDays, Clock3, Layers3, Trophy } from "lucide-react"
+"use client"
+
+import { useRouter } from "next/navigation"
+import {
+  ArrowRight,
+  CalendarDays,
+  Clock3,
+  Layers3,
+  Trophy,
+} from "lucide-react"
 import { Badge, Button, Card, Progress } from "@/components/ui"
 import { DifficultyBadge } from "@/components/shared/difficulty-badge"
 import { StatCard } from "@/components/shared/stat-card"
@@ -7,10 +16,20 @@ import { cn } from "@/lib/utils"
 import type { Screen } from "@/types/navigation"
 
 export interface DashboardViewProps {
-  setScreen: (s: Screen) => void
+  setScreen?: (s: Screen) => void
 }
 
 export function DashboardView({ setScreen }: DashboardViewProps) {
+  const router = useRouter()
+
+  const navigate = (path: string, screenFallback?: Screen) => {
+    if (setScreen && screenFallback) {
+      setScreen(screenFallback)
+    } else {
+      router.push(path)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -54,7 +73,7 @@ export function DashboardView({ setScreen }: DashboardViewProps) {
             <Button
               variant="soft"
               size="sm"
-              onClick={() => setScreen("revision")}
+              onClick={() => navigate("/revisions", "revision")}
             >
               Start revision <ArrowRight className="size-4" />
             </Button>
@@ -64,7 +83,7 @@ export function DashboardView({ setScreen }: DashboardViewProps) {
               <button
                 key={p.id}
                 className="flex w-full items-center gap-4 p-4 text-left hover:bg-muted/60"
-                onClick={() => setScreen("details")}
+                onClick={() => navigate(`/problems/${p.id}`, "details")}
               >
                 <div
                   className={cn(
@@ -165,7 +184,7 @@ export function DashboardView({ setScreen }: DashboardViewProps) {
           <Button
             className="mt-5 w-full"
             variant="outline"
-            onClick={() => setScreen("analytics")}
+            onClick={() => navigate("/analytics", "analytics")}
           >
             View full analytics
           </Button>
@@ -176,7 +195,7 @@ export function DashboardView({ setScreen }: DashboardViewProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setScreen("activity")}
+              onClick={() => navigate("/activity", "activity")}
             >
               View all
             </Button>

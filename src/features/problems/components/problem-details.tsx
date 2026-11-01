@@ -1,3 +1,6 @@
+"use client"
+
+import { useRouter } from "next/navigation"
 import {
   ArrowLeft,
   Check,
@@ -11,14 +14,42 @@ import {
 } from "lucide-react"
 import { Badge, Button, Card } from "@/components/ui"
 import { DifficultyBadge } from "@/components/shared/difficulty-badge"
+import { useProblems } from "@/hooks/use-problems"
 import { cn } from "@/lib/utils"
 import type { Screen } from "@/types/navigation"
+import type { Problem } from "@/types/problem"
 
 export interface ProblemDetailsProps {
-  setScreen: (s: Screen) => void
+  problemId?: string | number
+  problem?: Problem
+  setScreen?: (s: Screen) => void
 }
 
-export function ProblemDetails({ setScreen }: ProblemDetailsProps) {
+export function ProblemDetails({ problemId, problem: propProblem, setScreen }: ProblemDetailsProps) {
+  const router = useRouter()
+  const { getProblemById, items } = useProblems()
+
+  const resolvedProblem =
+    propProblem ||
+    (problemId ? getProblemById(problemId) : undefined) ||
+    items[0]
+
+  const handleBack = () => {
+    if (setScreen) {
+      setScreen("problems")
+    } else {
+      router.push("/problems")
+    }
+  }
+
+  const handleStartRevision = () => {
+    if (setScreen) {
+      setScreen("revision")
+    } else {
+      router.push("/revisions")
+    }
+  }
+
   const steps = [
     "Added",
     "Day 1",
@@ -28,13 +59,14 @@ export function ProblemDetails({ setScreen }: ProblemDetailsProps) {
     "Day 30",
     "Day 60",
   ]
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <Button
           variant="ghost"
           className="w-fit"
-          onClick={() => setScreen("problems")}
+          onClick={handleBack}
         >
           <ArrowLeft className="size-4" />
           Back to problems
@@ -44,7 +76,7 @@ export function ProblemDetails({ setScreen }: ProblemDetailsProps) {
             <Edit3 className="size-4" />
             Edit
           </Button>
-          <Button onClick={() => setScreen("revision")}>
+          <Button onClick={handleStartRevision}>
             <RotateCcw className="size-4" />
             Start revision
           </Button>
@@ -57,24 +89,44 @@ export function ProblemDetails({ setScreen }: ProblemDetailsProps) {
           </div>
           <div className="flex-1">
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <DifficultyBadge value="Medium" />
-              <Badge tone="danger">Overdue</Badge>
-              <Badge>LeetCode</Badge>
+              <DifficultyBadge value={resolvedProblem.difficulty} />
+              <Badge
+                tone={
+                  resolvedProblem.status === "Mastered"
+                    ? "success"
+                    : resolvedProblem.status === "Overdue"
+                      ? "danger"
+                      : "primary"
+                }
+              >
+                {resolvedProblem.status}
+              </Badge>
+              <Badge>{resolvedProblem.platform}</Badge>
             </div>
             <div className="text-2xl font-bold tracking-tight">
-              Longest Substring Without Repeating Characters
+              {resolvedProblem.title}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {["Sliding Window", "Hash Map", "String"].map((t) => (
+              {resolvedProblem.topics.map((t) => (
                 <Badge key={t} tone="primary">
                   {t}
                 </Badge>
               ))}
             </div>
           </div>
-          <Button variant="outline" size="sm">
-            <ExternalLink className="size-4" />
-            Open problem
+          <Button variant="outline" size="sm" asChild>
+            <a
+              href={
+                resolvedProblem.url.startsWith("http")
+                  ? resolvedProblem.url
+                  : `https://${resolvedProblem.url}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink className="size-4" />
+              Open problem
+            </a>
           </Button>
         </div>
       </Card>
@@ -217,7 +269,13 @@ export function ProblemDetails({ setScreen }: ProblemDetailsProps) {
             <Button
               className="mt-4 w-full"
               variant="soft"
-              onClick={() => setScreen("mastery")}
+              onClick={() => {
+                if (setScreen) {
+                  setScreen("mastery")
+                } else {
+                  router.push("/mastery")
+                }
+              }}
             >
               Take mastery test
             </Button>
