@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #f7f8fb;
+  --color-foreground: #182032;
+  --color-card: #ffffff;
+  --color-card-foreground: #182032;
+  --color-primary: #4f46e5;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #eef0ff;
+  --color-secondary-foreground: #4338ca;
+  --color-muted: #f1f3f7;
+  --color-muted-foreground: #667085;
+  --color-border: #e4e7ec;
+  --color-danger: #d92d20;
+  --color-warning: #dc6803;
+  --color-success: #079455;
+  --font-sans: "Inter", "SF Pro Text", "Segoe UI", sans-serif;
+  --radius-card: 1rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    @apply outline-none;
+  }
+
+  ::selection {
+    @apply bg-primary/20;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
