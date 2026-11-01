@@ -1,3 +1,7 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Flame, MoreHorizontal, X } from "lucide-react"
 import { Brand } from "./brand"
 import { Button, Card, Progress } from "@/components/ui"
@@ -6,13 +10,22 @@ import { cn } from "@/lib/utils"
 import type { Screen } from "@/types/navigation"
 
 export interface SidebarProps {
-  screen: Screen
-  setScreen: (s: Screen) => void
+  screen?: Screen
+  setScreen?: (s: Screen) => void
   open: boolean
   close: () => void
 }
 
-export function Sidebar({ screen, setScreen, open, close }: SidebarProps) {
+export function Sidebar({ open, close }: SidebarProps) {
+  const pathname = usePathname()
+
+  const isItemActive = (href: string) => {
+    if (href === "/dashboard") {
+      return pathname === "/dashboard"
+    }
+    return pathname === href || pathname.startsWith(`${href}/`)
+  }
+
   return (
     <>
       {open && (
@@ -29,7 +42,9 @@ export function Sidebar({ screen, setScreen, open, close }: SidebarProps) {
         )}
       >
         <div className="flex items-center justify-between px-1">
-          <Brand />
+          <Link href="/dashboard" onClick={close} className="transition-opacity hover:opacity-90">
+            <Brand />
+          </Link>
           <Button
             className="lg:hidden"
             variant="ghost"
@@ -48,16 +63,15 @@ export function Sidebar({ screen, setScreen, open, close }: SidebarProps) {
               <div className="space-y-1">
                 {group.items.map((item) => {
                   const Icon = item.icon
+                  const active = isItemActive(item.href)
                   return (
-                    <button
+                    <Link
                       key={item.id}
-                      onClick={() => {
-                        setScreen(item.id)
-                        close()
-                      }}
+                      href={item.href}
+                      onClick={close}
                       className={cn(
                         "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                        screen === item.id
+                        active
                           ? "bg-secondary text-secondary-foreground"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground",
                       )}
@@ -69,7 +83,7 @@ export function Sidebar({ screen, setScreen, open, close }: SidebarProps) {
                           5
                         </span>
                       )}
-                    </button>
+                    </Link>
                   )
                 })}
               </div>
