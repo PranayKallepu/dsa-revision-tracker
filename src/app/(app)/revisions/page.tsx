@@ -1,5 +1,5 @@
-import { RevisionWorkspace } from "@/features/revisions"
+import { RevisionQueueView } from "@/features/revisions"
 
 export default function RevisionsPage() {
-  return <RevisionWorkspace />
+  return <RevisionQueueView />
 }
