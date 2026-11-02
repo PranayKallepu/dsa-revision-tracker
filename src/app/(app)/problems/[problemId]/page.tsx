@@ -6,6 +6,6 @@ interface Props {
 
 export default async function ProblemDetailPage({ params }: Props) {
   const { problemId } = await params
+
   return <ProblemDetails problemId={problemId} />
 }
-
