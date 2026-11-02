@@ -14,16 +14,36 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Workspace",
     items: [
       { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: Home },
-      { id: "problems", label: "My Problems", href: "/problems", icon: ListChecks },
-      { id: "revision", label: "Revision Queue", href: "/revisions", icon: RotateCcw },
+      {
+        id: "problems",
+        label: "My Problems",
+        href: "/problems",
+        icon: ListChecks,
+      },
+      {
+        id: "revision",
+        label: "Revision Queue",
+        href: "/revisions",
+        icon: RotateCcw,
+      },
       { id: "mastery", label: "Mastery Tests", href: "/mastery", icon: Trophy },
     ],
   },
   {
     label: "Insights",
     items: [
-      { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
-      { id: "activity", label: "Activity History", href: "/activity", icon: History },
+      {
+        id: "analytics",
+        label: "Analytics",
+        href: "/analytics",
+        icon: BarChart3,
+      },
+      {
+        id: "activity",
+        label: "Activity History",
+        href: "/activity",
+        icon: History,
+      },
       { id: "archived", label: "Archived", href: "/archived", icon: Archive },
     ],
   },
@@ -63,11 +83,11 @@ export const SCREEN_TITLES: Record<Screen, [string, string]> = {
 }
 
 export const ROUTE_TITLES: Record<string, [string, string]> = {
-  "/dashboard": ["Good morning, Alex", "Here’s what needs your attention today."],
-  "/problems": [
-    "My Problems",
-    "Organize, search, and track your entire practice library.",
+  "/dashboard": [
+    "Good morning, Alex",
+    "Here’s what needs your attention today.",
   ],
+  "/problems": ["Problems", "Manage your DSA problem collection."],
   "/problems/new": [
     "Add a problem",
     "Capture the key details while they’re fresh.",
@@ -98,8 +118,17 @@ export function getHeaderTitle(pathname: string): [string, string] {
   if (ROUTE_TITLES[pathname]) {
     return ROUTE_TITLES[pathname]
   }
+  if (pathname.endsWith("/edit")) {
+    return [
+      "Edit problem",
+      "Update your solution notes, complexity, or classification.",
+    ]
+  }
   if (pathname.startsWith("/problems/")) {
-    return ["Problem details", "Review your notes, attempts, and revision journey."]
+    return [
+      "Problem details",
+      "Review your notes, attempts, and revision journey.",
+    ]
   }
   return ["Good morning, Alex", "Here’s what needs your attention today."]
 }
