@@ -1,8 +1,5 @@
 "use client"
 
-// Not-found state if invalid problem ID
-/* 1. Navigation & Actions Bar */ /* Archive Notice Banner if problem is archived */ /* 2. Main Hero Card */ /* 3. Detailed Sections Grid */ /* Left Column: Solution Reflection, Notes & Attempts */ /* Approach Card */ /* Complexity Badges */ /* Personal Notes & Gotchas */ /* Attempt History Card */ /* Right Column: Spaced Repetition Timeline & Mastery */ /* Spaced Repetition Timeline */ /* Mastery Unlock Card */
-
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -10,6 +7,7 @@ import {
   AlertTriangle,
   Archive,
   ArrowLeft,
+  CalendarCheck,
   Check,
   CheckCircle2,
   Clock,
@@ -17,6 +15,7 @@ import {
   Edit3,
   ExternalLink,
   FileText,
+  History,
   Lightbulb,
   RotateCcw,
   Sparkles,
@@ -43,8 +42,7 @@ export function ProblemDetails({
   const { getProblemById, archiveProblem, restoreProblem } = useProblems()
 
   const resolvedProblem =
-    propProblem ||
-    (problemId ? getProblemById(problemId) : undefined)
+    propProblem || (problemId ? getProblemById(problemId) : undefined)
 
   const handleBack = () => {
     if (setScreen) {
@@ -63,22 +61,21 @@ export function ProblemDetails({
   const handleStartRevision = () => {
     if (setScreen) {
       setScreen("revision")
-    } else {
-      router.push("/revisions")
+    } else if (resolvedProblem) {
+      router.push(`/revisions/${resolvedProblem.id}`)
     }
   }
 
   const handleToggleArchive = () => {
     if (!resolvedProblem) return
-    if (
-      resolvedProblem.status ===
-      "Archived"
-    ) {
+    if (resolvedProblem.status === "Archived") {
       restoreProblem(resolvedProblem.id)
     } else {
       archiveProblem(resolvedProblem.id)
     }
   }
+
+  // Not-found state if invalid problem ID
   if (!resolvedProblem) {
     return (
       <div className="mx-auto max-w-xl py-16 text-center">
@@ -127,7 +124,7 @@ export function ProblemDetails({
 
   return (
     <div className="space-y-6">
-      {}
+      {/* 1. Navigation & Actions Bar */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <Button
           variant="ghost"
@@ -172,7 +169,7 @@ export function ProblemDetails({
         </div>
       </div>
 
-      {}
+      {/* Archive Notice Banner */}
       {isArchived && (
         <Card className="flex items-center justify-between border-amber-300 bg-amber-50/70 p-4 dark:bg-amber-950/20">
           <div className="flex items-center gap-3">
@@ -192,7 +189,7 @@ export function ProblemDetails({
         </Card>
       )}
 
-      {}
+      {/* 2. Main Hero Card */}
       <Card className="p-6 sm:p-7">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
@@ -254,11 +251,11 @@ export function ProblemDetails({
         </div>
       </Card>
 
-      {}
+      {/* 3. Detailed Sections Grid */}
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        {}
+        {/* Left Column: Solution Reflection, Notes, Revisions & Attempts */}
         <div className="space-y-6">
-          {}
+          {/* Approach Card */}
           <Card className="p-6">
             <div className="mb-4 flex items-center gap-2 font-bold text-foreground">
               <Lightbulb className="size-5 text-primary" />
@@ -275,7 +272,7 @@ export function ProblemDetails({
               </p>
             )}
 
-            {}
+            {/* Complexity Badges */}
             <div className="mt-6 grid grid-cols-2 gap-4 border-t pt-5">
               <div className="rounded-xl border bg-muted/30 p-3.5">
                 <div className="text-xs text-muted-foreground font-medium">
@@ -296,7 +293,7 @@ export function ProblemDetails({
             </div>
           </Card>
 
-          {}
+          {/* Personal Notes & Gotchas */}
           {(resolvedProblem.notes || resolvedProblem.mistakes) && (
             <div className="grid gap-6 sm:grid-cols-2">
               {resolvedProblem.notes && (
@@ -324,12 +321,74 @@ export function ProblemDetails({
             </div>
           )}
 
-          {}
+          {/* Revision History Card (Scheduled Learning Events) */}
           <Card className="p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-bold text-foreground">
-                Attempt & Revision History
-              </h2>
+              <div className="flex items-center gap-2 font-bold text-foreground">
+                <CalendarCheck className="size-4 text-primary" />
+                <h2>Revision History (Spaced Learning Events)</h2>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {resolvedProblem.revisions?.length ?? 0} completed
+              </span>
+            </div>
+
+            {resolvedProblem.revisions && resolvedProblem.revisions.length > 0 ? (
+              <div className="space-y-3">
+                {resolvedProblem.revisions.map((rev) => (
+                  <div
+                    key={rev.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border p-3.5 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-primary text-xs font-bold">
+                        R{rev.revisionNumber}
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-foreground">
+                          Revision #{rev.revisionNumber}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Scheduled: {rev.scheduledDate} · Completed: {rev.completionDate}
+                          {rev.durationMinutes ? ` · ${rev.durationMinutes} min` : ""}
+                        </div>
+                      </div>
+                    </div>
+                    {rev.rating && (
+                      <Badge
+                        tone={
+                          rev.rating === "Forgot"
+                            ? "danger"
+                            : rev.rating === "Difficult"
+                              ? "warning"
+                              : rev.rating === "Good"
+                                ? "primary"
+                                : "success"
+                        }
+                      >
+                        {rev.rating}
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed p-6 text-center text-muted-foreground">
+                <p className="text-sm">No completed revisions logged yet.</p>
+                <p className="mt-1 text-xs">
+                  Click "Start Revision" to begin active recall on this problem.
+                </p>
+              </div>
+            )}
+          </Card>
+
+          {/* Attempt History Card (Solving Sessions) */}
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-foreground">
+                <History className="size-4 text-primary" />
+                <h2>Attempt History (Solving Sessions)</h2>
+              </div>
               <span className="text-xs text-muted-foreground">
                 {resolvedProblem.attempts?.length ?? 0} attempt
                 {resolvedProblem.attempts?.length === 1 ? "" : "s"}
@@ -358,44 +417,46 @@ export function ProblemDetails({
                       </div>
                       <div>
                         <div className="text-sm font-semibold text-foreground">
-                          Revision {resolvedProblem.attempts!.length - i}
+                          Attempt #{resolvedProblem.attempts!.length - i}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {attempt.date} · {attempt.timeSpent} min
+                          {attempt.date || attempt.createdDate} ·{" "}
+                          {attempt.timeSpent || attempt.duration} min
                           {attempt.notes ? ` · "${attempt.notes}"` : ""}
                         </div>
                       </div>
                     </div>
-                    <Badge
-                      tone={
-                        attempt.rating === "Forgot"
-                          ? "danger"
-                          : attempt.rating === "Difficult"
-                            ? "warning"
-                            : "success"
-                      }
-                      className="self-start sm:self-center"
-                    >
-                      {attempt.rating}
-                    </Badge>
+                    {attempt.rating && (
+                      <Badge
+                        tone={
+                          attempt.rating === "Forgot"
+                            ? "danger"
+                            : attempt.rating === "Difficult"
+                              ? "warning"
+                              : "success"
+                        }
+                        className="self-start sm:self-center"
+                      >
+                        {attempt.rating}
+                      </Badge>
+                    )}
                   </div>
                 ))}
               </div>
             ) : (
               <div className="rounded-xl border border-dashed p-6 text-center text-muted-foreground">
-                <p className="text-sm">No revision attempts logged yet.</p>
+                <p className="text-sm">No solving attempts logged yet.</p>
                 <p className="mt-1 text-xs">
-                  Revisions are scheduled via spaced repetition. Click "Start
-                  Revision" when ready.
+                  Solving durations entered during revisions will be preserved here.
                 </p>
               </div>
             )}
           </Card>
         </div>
 
-        {}
+        {/* Right Column: Spaced Repetition Timeline & Mastery */}
         <div className="space-y-6">
-          {}
+          {/* Spaced Repetition Timeline */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-bold text-foreground">
@@ -463,7 +524,7 @@ export function ProblemDetails({
             </div>
           </Card>
 
-          {}
+          {/* Mastery Unlock Card */}
           <Card className="border-primary/20 bg-secondary/30 p-5">
             <div className="flex items-center gap-2 font-bold text-foreground">
               <Sparkles className="size-5 text-primary" />
