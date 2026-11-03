@@ -1,0 +1,27 @@
+// ==============================================================================
+// Prisma Schema - DSA Revision & Mastery Platform
+// ==============================================================================
+// Documentation: https://pris.ly/d/prisma-schema
+// ==============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Foundation model to verify database connectivity, schema generation,
+// and migration workflows in Phase B0.
+// Core domain models (User, Problem, Revision, Attempt) will be introduced
+// in subsequent backend phases.
+model HealthCheck {
+  id        String   @id @default(cuid())
+  status    String   @default("ok")
+  checkedAt DateTime @default(now())
+
+  @@map("health_checks")
+}
+
