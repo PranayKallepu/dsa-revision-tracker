@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { signOut } from "next-auth/react"
 import { Bell, LogOut, Menu, Search } from "lucide-react"
 import { Button } from "@/components/ui"
 import { getHeaderTitle, SCREEN_TITLES } from "@/constants/navigation"
@@ -26,6 +27,13 @@ export function Header({
   const defaultHeader = screen ? SCREEN_TITLES[screen] : getHeaderTitle(pathname)
   const title = customTitle || defaultHeader[0]
   const subtitle = customSubtitle || defaultHeader[1]
+
+  const handleLogout = () => {
+    if (setAuth) {
+      setAuth(true)
+    }
+    signOut({ callbackUrl: "/login" })
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b bg-background/90 px-4 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
@@ -53,27 +61,14 @@ export function Header({
           <Bell className="size-4" />
           <span className="absolute right-2 top-2 size-2 rounded-full bg-danger ring-2 ring-white" />
         </Button>
-        {setAuth ? (
-          <Button
-            className="hidden sm:flex"
-            variant="ghost"
-            onClick={() => setAuth(true)}
-          >
-            <LogOut className="size-4" />
-            Log out
-          </Button>
-        ) : (
-          <Button
-            asChild
-            className="hidden sm:flex"
-            variant="ghost"
-          >
-            <Link href="/login">
-              <LogOut className="size-4" />
-              Log out
-            </Link>
-          </Button>
-        )}
+        <Button
+          className="hidden sm:flex"
+          variant="ghost"
+          onClick={handleLogout}
+        >
+          <LogOut className="size-4" />
+          Log out
+        </Button>
       </div>
     </header>
   )
