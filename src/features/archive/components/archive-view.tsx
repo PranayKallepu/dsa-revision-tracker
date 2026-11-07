@@ -1,4 +1,4 @@
-"use client" /* Header and Back Link */ /* Info Card */ /* List Card */
+"use client"
 
 import Link from "next/link"
 import { Archive, ArrowLeft, CircleHelp, Eye, RotateCcw } from "lucide-react"
@@ -8,7 +8,7 @@ import type { Problem } from "@/types/problem"
 
 export interface ArchiveViewProps {
   items: Problem[]
-  restore: (id: number) => void
+  restore: (id: number | string) => void
 }
 
 export function ArchiveView({ items, restore }: ArchiveViewProps) {
@@ -16,7 +16,7 @@ export function ArchiveView({ items, restore }: ArchiveViewProps) {
 
   return (
     <div className="space-y-6">
-      {}
+      {/* Header and Back Link */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2">
@@ -42,7 +42,7 @@ export function ArchiveView({ items, restore }: ArchiveViewProps) {
         </div>
       </div>
 
-      {}
+      {/* Info Card */}
       <Card className="flex items-start gap-3 border-amber-300 bg-amber-50/70 p-4 dark:bg-amber-950/20">
         <CircleHelp className="mt-0.5 size-5 shrink-0 text-warning" />
         <div>
@@ -57,7 +57,7 @@ export function ArchiveView({ items, restore }: ArchiveViewProps) {
         </div>
       </Card>
 
-      {}
+      {/* List Card */}
       <Card className="overflow-hidden">
         {archived.length > 0 ? (
           <div className="divide-y">

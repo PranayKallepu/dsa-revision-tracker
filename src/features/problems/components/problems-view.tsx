@@ -1,28 +1,5 @@
 "use client"
 
-// Filter states
-
-// Dynamically extract all unique topics present in items
-
-// Compute status counts for the pills
-
-// Filtered problems
-// 1. Status Filter
-
-// 2. Query Search (by title, topic, platform)
-
-// 3. Difficulty Filter
-
-// 4. Platform Filter
-
-// 5. Topic Filter
-
-// Pagination calculation
-/* 1. Page Header */ /* 2. Status Quick Tabs */ /* 3. Search and Multi-filter Bar */ /* Search Input */ /* Difficulty Filter */ /* Platform Filter */ /* Topic Filter */ /* Clear Filters Action */ /* 4. Table or Empty State Card */
-/* Empty State: No problems created yet */
-/* No-Results State: Filters matched nothing */
-/* Active Problems Table */ /* Pagination Controls */
-
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -63,74 +40,39 @@ export function ProblemsView({
 }: ProblemsViewProps) {
   const router = useRouter()
   const { items: contextItems, archiveProblem, restoreProblem } = useProblems()
-  const items =
-    propItems ||
-    contextItems
+  const items = propItems || contextItems
   const [query, setQuery] = useState("")
   const [difficulty, setDifficulty] = useState<string>("All")
   const [platform, setPlatform] = useState<string>("All")
   const [topic, setTopic] = useState<string>("All")
   const [statusFilter, setStatusFilter] = useState<string>("active")
   const [currentPage, setCurrentPage] = useState<number>(1)
+
   const allTopics = useMemo(() => {
     const set = new Set<string>()
     items.forEach((p) => p.topics?.forEach((t) => set.add(t)))
     return Array.from(set).sort()
   }, [items])
+
   const counts = useMemo(() => {
     const total = items.length
-    const active = items.filter(
-      (p) =>
-        p.status !==
-        "Archived",
-    ).length
-    const learning = items.filter(
-      (p) =>
-        p.status ===
-        "Learning",
-    ).length
-    const mastered = items.filter(
-      (p) =>
-        p.status ===
-        "Mastered",
-    ).length
-    const overdue = items.filter(
-      (p) =>
-        p.status ===
-        "Overdue",
-    ).length
-    const archived = items.filter(
-      (p) =>
-        p.status ===
-        "Archived",
-    ).length
+    const active = items.filter((p) => p.status !== "Archived").length
+    const learning = items.filter((p) => p.status === "Learning").length
+    const mastered = items.filter((p) => p.status === "Mastered").length
+    const overdue = items.filter((p) => p.status === "Overdue").length
+    const archived = items.filter((p) => p.status === "Archived").length
     return { total, active, learning, mastered, overdue, archived }
   }, [items])
+
   const filtered = useMemo(() => {
     return items.filter((p) => {
+      if (statusFilter === "active" && p.status === "Archived") return false
+      if (statusFilter === "Archived" && p.status !== "Archived") return false
       if (
-        statusFilter ===
-          "active" &&
-        p.status ===
-          "Archived"
-      )
-        return false
-      if (
-        statusFilter ===
-          "Archived" &&
-        p.status !==
-          "Archived"
-      )
-        return false
-      if (
-        statusFilter !==
-          "all" &&
-        statusFilter !==
-          "active" &&
-        statusFilter !==
-          "Archived" &&
-        p.status !==
-          statusFilter
+        statusFilter !== "all" &&
+        statusFilter !== "active" &&
+        statusFilter !== "Archived" &&
+        p.status !== statusFilter
       ) {
         return false
       }
@@ -143,33 +85,20 @@ export function ProblemsView({
           return false
         }
       }
-      if (
-        difficulty !==
-          "All" &&
-        p.difficulty !==
-          difficulty
-      ) {
+      if (difficulty !== "All" && p.difficulty !== difficulty) {
         return false
       }
-      if (
-        platform !==
-          "All" &&
-        p.platform !==
-          platform
-      ) {
+      if (platform !== "All" && p.platform !== platform) {
         return false
       }
-      if (
-        topic !==
-          "All" &&
-        !p.topics?.includes(topic)
-      ) {
+      if (topic !== "All" && !p.topics?.includes(topic)) {
         return false
       }
 
       return true
     })
   }, [items, query, difficulty, platform, topic, statusFilter])
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
   const paginatedItems = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE
@@ -200,7 +129,7 @@ export function ProblemsView({
     }
   }
 
-  const handleDetails = (id: number) => {
+  const handleDetails = (id: number | string) => {
     if (setScreen) {
       setScreen("details")
     } else {
@@ -208,13 +137,13 @@ export function ProblemsView({
     }
   }
 
-  const handleEdit = (id: number) => {
+  const handleEdit = (id: number | string) => {
     router.push(`/problems/${id}/edit`)
   }
 
   return (
     <div className="space-y-6">
-      {}
+      {/* 1. Page Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -238,7 +167,7 @@ export function ProblemsView({
         </div>
       </div>
 
-      {}
+      {/* 2. Status Quick Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         <Button
           variant={statusFilter === "active" ? "default" : "outline"}
@@ -308,10 +237,10 @@ export function ProblemsView({
         </Button>
       </div>
 
-      {}
+      {/* 3. Search and Multi-filter Bar */}
       <Card className="p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          {}
+          {/* Search Input */}
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
             <Input
@@ -326,7 +255,7 @@ export function ProblemsView({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            {}
+            {/* Difficulty Filter */}
             <Select
               value={difficulty}
               onValueChange={(val) => {
@@ -345,7 +274,7 @@ export function ProblemsView({
               </SelectContent>
             </Select>
 
-            {}
+            {/* Platform Filter */}
             <Select
               value={platform}
               onValueChange={(val) => {
@@ -366,7 +295,7 @@ export function ProblemsView({
               </SelectContent>
             </Select>
 
-            {}
+            {/* Topic Filter */}
             <Select
               value={topic}
               onValueChange={(val) => {
@@ -387,7 +316,7 @@ export function ProblemsView({
               </SelectContent>
             </Select>
 
-            {}
+            {/* Clear Filters Action */}
             {hasActiveFilters && (
               <Button
                 variant="ghost"
@@ -403,7 +332,7 @@ export function ProblemsView({
         </div>
       </Card>
 
-      {}
+      {/* 4. Table or Empty State Card */}
       <Card className="overflow-hidden">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center">
@@ -454,7 +383,7 @@ export function ProblemsView({
               onRestore={restoreProblem}
             />
 
-            {}
+            {/* Pagination Controls */}
             <div className="flex flex-col items-center justify-between gap-3 border-t p-4 text-sm text-muted-foreground sm:flex-row">
               <span>
                 Showing{" "}
