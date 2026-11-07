@@ -22,6 +22,9 @@ export const authConfig: NextAuthConfig = {
       const isPublicRoute =
         isAuthRoute ||
         nextUrl.pathname === "/" ||
+        nextUrl.pathname.startsWith("/docs") ||
+        nextUrl.pathname.startsWith("/api/docs") ||
+        nextUrl.pathname.startsWith("/api/openapi.json") ||
         nextUrl.pathname.startsWith("/api/health") ||
         nextUrl.pathname.startsWith("/api/auth")
 
