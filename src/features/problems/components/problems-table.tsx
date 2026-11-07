@@ -31,10 +31,10 @@ import type { Problem } from "@/types/problem"
 
 export interface ProblemsTableProps {
   items: Problem[]
-  onView?: (id: number) => void
-  onEdit?: (id: number) => void
-  onArchive?: (id: number) => void
-  onRestore?: (id: number) => void
+  onView?: (id: number | string) => void
+  onEdit?: (id: number | string) => void
+  onArchive?: (id: number | string) => void
+  onRestore?: (id: number | string) => void
 }
 
 export function ProblemsTable({
@@ -46,7 +46,7 @@ export function ProblemsTable({
 }: ProblemsTableProps) {
   const router = useRouter()
 
-  const handleView = (id: number) => {
+  const handleView = (id: number | string) => {
     if (onView) {
       onView(id)
     } else {
@@ -54,7 +54,7 @@ export function ProblemsTable({
     }
   }
 
-  const handleEdit = (id: number) => {
+  const handleEdit = (id: number | string) => {
     if (onEdit) {
       onEdit(id)
     } else {
@@ -194,7 +194,7 @@ export function ProblemsTable({
                         Edit problem
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/revisions">
+                        <Link href={`/revisions/${p.id}`}>
                           <RotateCcw className="size-4 mr-2" />
                           Start revision
                         </Link>

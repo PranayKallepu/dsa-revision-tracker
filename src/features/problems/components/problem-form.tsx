@@ -1,22 +1,5 @@
 "use client"
 
-// Attempt to resolve problem if in edit mode
-
-// If in edit mode and problem is not found (e.g. invalid problemId), flag it
-
-// Form states
-
-// Update states if resolvedProblem loads asynchronously (e.g., from localStorage hydration)
-
-// Handle URL changes and auto-detect platform
-
-// Topic management
-// Update existing problem
-// Create new problem
-
-// Not found fallback for invalid problemId in edit mode
-/* Header & Back Navigation */ /* Section 1: Problem Information */ /* Title Field */ /* URL Field */ /* Platform Field */ /* Difficulty Field */ /* Topics Field */ /* Active Selected Tags */ /* Custom Topic Input */ /* Recommended Topic Suggestions */ /* Section 2: Complexity & Solution Reflection */ /* Approach Textarea */ /* Complexities and Solving Duration */ /* Personal Notes */ /* Mistakes Made */ /* Form Actions */
-
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -61,7 +44,7 @@ export interface ProblemFormProps {
   problemId?: string | number
   initialData?: Problem
   isEdit?: boolean
-  addProblem?: (p: Problem) => void
+  addProblem?: (p: any) => any
   setScreen?: (s: Screen) => void
 }
 
@@ -206,7 +189,7 @@ export function ProblemForm({
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     setErrors({})
@@ -244,52 +227,61 @@ export function ProblemForm({
 
     const validData = validation.data
 
-    if (isEdit && resolvedProblem) {
-      const updated = updateProblem(resolvedProblem.id, {
-        title: validData.title,
-        url: validData.url,
-        platform: validData.platform,
-        difficulty: validData.difficulty,
-        topics: validData.topics,
-        time: validData.time,
-        approach: validData.approach,
-        timeComplexity: validData.timeComplexity,
-        spaceComplexity: validData.spaceComplexity,
-        notes: validData.notes,
-        mistakes: validData.mistakes,
-      })
+    try {
+      if (isEdit && resolvedProblem) {
+        await updateProblem(resolvedProblem.id, {
+          title: validData.title,
+          url: validData.url,
+          platform: validData.platform,
+          difficulty: validData.difficulty,
+          topics: validData.topics,
+          time: validData.time,
+          approach: validData.approach,
+          timeComplexity: validData.timeComplexity,
+          spaceComplexity: validData.spaceComplexity,
+          notes: validData.notes,
+          mistakes: validData.mistakes,
+        })
 
-      if (setScreen) {
-        setScreen("problems")
+        if (setScreen) {
+          setScreen("problems")
+        } else {
+          router.push(`/problems/${resolvedProblem.id}`)
+        }
       } else {
-        router.push(`/problems/${resolvedProblem.id}`)
-      }
-    } else {
-      const created = addProblem({
-        title: validData.title,
-        url: validData.url,
-        platform: validData.platform,
-        difficulty: validData.difficulty,
-        topics: validData.topics,
-        time: validData.time,
-        approach: validData.approach,
-        timeComplexity: validData.timeComplexity,
-        spaceComplexity: validData.spaceComplexity,
-        notes: validData.notes,
-        mistakes: validData.mistakes,
-        status: "Learning",
-        nextRevision: "Today",
-        revision: 0,
-        attempts: [],
-      })
+        const created = await addProblem({
+          title: validData.title,
+          url: validData.url,
+          platform: validData.platform,
+          difficulty: validData.difficulty,
+          topics: validData.topics,
+          time: validData.time,
+          approach: validData.approach,
+          timeComplexity: validData.timeComplexity,
+          spaceComplexity: validData.spaceComplexity,
+          notes: validData.notes,
+          mistakes: validData.mistakes,
+          status: "Learning",
+          nextRevision: "Today",
+          revision: 0,
+          attempts: [],
+        })
 
-      if (setScreen) {
-        setScreen("problems")
-      } else {
-        router.push(`/problems/${created.id}`)
+        if (setScreen) {
+          setScreen("problems")
+        } else if (created && created.id) {
+          router.push(`/problems/${created.id}`)
+        } else {
+          router.push("/problems")
+        }
       }
+    } catch (err) {
+      setErrors({ form: err instanceof Error ? err.message : "Failed to save problem" })
+    } finally {
+      setIsSubmitting(false)
     }
   }
+
   if (isNotFound) {
     return (
       <div className="mx-auto max-w-xl py-12 text-center">
@@ -313,7 +305,7 @@ export function ProblemForm({
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-6">
-      {}
+      {/* Header & Back Navigation */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button
@@ -338,7 +330,13 @@ export function ProblemForm({
         </div>
       </div>
 
-      {}
+      {errors.form && (
+        <Card className="border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive font-medium">
+          {errors.form}
+        </Card>
+      )}
+
+      {/* Section 1: Problem Information */}
       <Card className="p-5 sm:p-7">
         <div className="mb-6 flex items-center gap-3 border-b pb-4">
           <div className="flex size-10 items-center justify-center rounded-xl bg-secondary text-primary">
@@ -355,7 +353,7 @@ export function ProblemForm({
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          {}
+          {/* Title Field */}
           <div className="sm:col-span-2 space-y-1.5">
             <Label htmlFor="problem-title">
               Problem title <span className="text-destructive">*</span>
@@ -381,7 +379,7 @@ export function ProblemForm({
             )}
           </div>
 
-          {}
+          {/* URL Field */}
           <div className="sm:col-span-2 space-y-1.5">
             <Label htmlFor="problem-url">
               Problem URL <span className="text-destructive">*</span>
@@ -409,7 +407,7 @@ export function ProblemForm({
             )}
           </div>
 
-          {}
+          {/* Platform Field */}
           <div className="space-y-1.5">
             <Label htmlFor="platform-select">Platform</Label>
             <Select
@@ -438,7 +436,7 @@ export function ProblemForm({
             )}
           </div>
 
-          {}
+          {/* Difficulty Field */}
           <div className="space-y-1.5">
             <Label htmlFor="difficulty-select">Difficulty</Label>
             <Select
@@ -467,13 +465,13 @@ export function ProblemForm({
             )}
           </div>
 
-          {}
+          {/* Topics Field */}
           <div className="sm:col-span-2 space-y-2">
             <Label>
               Topics & Patterns <span className="text-destructive">*</span>
             </Label>
 
-            {}
+            {/* Active Selected Tags */}
             <div className="flex flex-wrap items-center gap-1.5 min-h-[38px] p-2 border rounded-md bg-background">
               {topics.length === 0 ? (
                 <span className="text-xs text-muted-foreground">
@@ -501,7 +499,7 @@ export function ProblemForm({
               )}
             </div>
 
-            {}
+            {/* Custom Topic Input */}
             <div className="flex gap-2">
               <Input
                 placeholder="Type a custom topic tag..."
@@ -526,7 +524,7 @@ export function ProblemForm({
               </Button>
             </div>
 
-            {}
+            {/* Recommended Topic Suggestions */}
             <div className="mt-2">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Quick Add:
@@ -556,7 +554,7 @@ export function ProblemForm({
         </div>
       </Card>
 
-      {}
+      {/* Section 2: Complexity & Solution Reflection */}
       <Card className="p-5 sm:p-7">
         <div className="mb-6 flex items-center gap-3 border-b pb-4">
           <div className="flex size-10 items-center justify-center rounded-xl bg-secondary text-primary">
@@ -574,7 +572,7 @@ export function ProblemForm({
         </div>
 
         <div className="space-y-5">
-          {}
+          {/* Approach Textarea */}
           <div className="space-y-1.5">
             <Label htmlFor="approach-input">Approach / Solution Logic</Label>
             <Textarea
@@ -586,7 +584,7 @@ export function ProblemForm({
             />
           </div>
 
-          {}
+          {/* Complexities and Solving Duration */}
           <div className="grid gap-5 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="time-complexity">Time Complexity</Label>
@@ -633,7 +631,7 @@ export function ProblemForm({
             </div>
           </div>
 
-          {}
+          {/* Personal Notes */}
           <div className="space-y-1.5">
             <Label htmlFor="personal-notes">Personal Notes & Insights</Label>
             <Textarea
@@ -645,7 +643,7 @@ export function ProblemForm({
             />
           </div>
 
-          {}
+          {/* Mistakes Made */}
           <div className="space-y-1.5">
             <Label htmlFor="mistakes-made">Mistakes Made / Pitfalls</Label>
             <Textarea
@@ -659,7 +657,7 @@ export function ProblemForm({
         </div>
       </Card>
 
-      {}
+      {/* Form Actions */}
       <div className="flex items-center justify-end gap-3 pt-2">
         <Button
           type="button"

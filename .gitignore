@@ -4,6 +4,9 @@ node_modules/
 .pnp.js
 
 # Testing
+/scratch
+
+# Testing
 /coverage
 
 # Next.js build output
