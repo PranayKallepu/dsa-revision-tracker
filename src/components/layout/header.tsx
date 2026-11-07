@@ -1,16 +1,40 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { signOut } from "next-auth/react"
 import { Bell, LogOut, Menu, Search } from "lucide-react"
 import { Button } from "@/components/ui"
-import { SCREEN_TITLES } from "@/constants/navigation"
+import { getHeaderTitle, SCREEN_TITLES } from "@/constants/navigation"
 import type { Screen } from "@/types/navigation"
 
 export interface HeaderProps {
-  screen: Screen
+  screen?: Screen
+  title?: string
+  subtitle?: string
   openMenu: () => void
-  setAuth: (v: boolean) => void
+  setAuth?: (v: boolean) => void
 }
 
-export function Header({ screen, openMenu, setAuth }: HeaderProps) {
-  const [title, subtitle] = SCREEN_TITLES[screen]
+export function Header({
+  screen,
+  title: customTitle,
+  subtitle: customSubtitle,
+  openMenu,
+  setAuth,
+}: HeaderProps) {
+  const pathname = usePathname()
+  const defaultHeader = screen ? SCREEN_TITLES[screen] : getHeaderTitle(pathname)
+  const title = customTitle || defaultHeader[0]
+  const subtitle = customSubtitle || defaultHeader[1]
+
+  const handleLogout = () => {
+    if (setAuth) {
+      setAuth(true)
+    }
+    signOut({ callbackUrl: "/login" })
+  }
+
   return (
     <header className="sticky top-0 z-30 border-b bg-background/90 px-4 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl items-center gap-4">
@@ -40,7 +64,7 @@ export function Header({ screen, openMenu, setAuth }: HeaderProps) {
         <Button
           className="hidden sm:flex"
           variant="ghost"
-          onClick={() => setAuth(true)}
+          onClick={handleLogout}
         >
           <LogOut className="size-4" />
           Log out

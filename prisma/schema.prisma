@@ -1,0 +1,298 @@
+// ==============================================================================
+// Prisma Schema - DSA Revision & Mastery Platform
+// ==============================================================================
+// Architecture: Next.js App Router + PostgreSQL + Prisma ORM
+// Phase B2: Authentication & Domain Models
+// ==============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------------------
+// Enums
+// ------------------------------------------------------------------------------
+
+enum Platform {
+  LEETCODE
+  GEEKSFORGEEKS
+  HACKERRANK
+  CODEFORCES
+  INTERVIEWBIT
+  OTHER
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ProblemStatus {
+  LEARNING
+  MASTERED
+  OVERDUE
+  ARCHIVED
+}
+
+enum RevisionRating {
+  FORGOT
+  DIFFICULT
+  GOOD
+  EASY
+}
+
+enum RevisionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum AssessmentStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  COMPLETED
+  CANCELLED
+}
+
+enum AssessmentResult {
+  MASTERY_ACHIEVED
+  NEEDS_IMPROVEMENT
+}
+
+// ------------------------------------------------------------------------------
+// Authentication & User Models (Auth.js Compatible)
+// ------------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  passwordHash  String?   @map("password_hash")
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Domain Relations
+  problems Problem[]
+  topics   Topic[]
+
+  // Auth.js Relations
+  accounts Account[]
+  sessions Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ------------------------------------------------------------------------------
+// Domain Models
+// ------------------------------------------------------------------------------
+
+model Problem {
+  id                          String        @id @default(cuid())
+  userId                      String        @map("user_id")
+  title                       String
+  url                         String
+  platform                    Platform
+  difficulty                  Difficulty
+  status                      ProblemStatus @default(LEARNING)
+  approach                    String?       @db.Text
+  timeComplexity              String?       @map("time_complexity")
+  spaceComplexity             String?       @map("space_complexity")
+  notes                       String?       @db.Text
+  mistakes                    String?       @db.Text
+  initialSolveDurationSeconds Int?          @map("initial_solve_duration_seconds")
+  originalSolvedAt            DateTime      @default(now()) @map("original_solved_at")
+  archivedAt                  DateTime?     @map("archived_at")
+  createdAt                   DateTime      @default(now()) @map("created_at")
+  updatedAt                   DateTime      @updatedAt @map("updated_at")
+
+  // Relationships
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topics      ProblemTopic[]
+  revisions   Revision[]
+  attempts    Attempt[]
+  assessments Assessment[]
+
+  @@index([userId])
+  @@index([difficulty])
+  @@index([platform])
+  @@index([archivedAt])
+  @@index([userId, archivedAt])
+  @@map("problems")
+}
+
+model Topic {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id") // Null for global/predefined topics, set for user custom topics
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  user     User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problems ProblemTopic[]
+
+  @@unique([userId, name])
+  @@index([name])
+  @@index([userId])
+  @@map("topics")
+}
+
+model ProblemTopic {
+  problemId String  @map("problem_id")
+  topicId   String  @map("topic_id")
+
+  // Relationships
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([problemId, topicId])
+  @@index([topicId])
+  @@index([problemId])
+  @@map("problem_topics")
+}
+
+model Revision {
+  id             String          @id @default(cuid())
+  problemId      String          @map("problem_id")
+  cycleNumber    Int             @default(1) @map("cycle_number")
+  revisionNumber Int             @map("revision_number")
+  scheduledAt    DateTime        @map("scheduled_at")
+  completedAt    DateTime?       @map("completed_at")
+  rating         RevisionRating?
+  status         RevisionStatus  @default(PENDING)
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  // Relationships
+  problem  Problem   @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  attempts Attempt[]
+
+  @@unique([problemId, cycleNumber, revisionNumber])
+  @@index([problemId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([cycleNumber])
+  @@index([problemId, status])
+  @@index([scheduledAt, status])
+  @@map("revisions")
+}
+
+model Attempt {
+  id              String    @id @default(cuid())
+  problemId       String    @map("problem_id")
+  revisionId      String?   @map("revision_id")
+  durationSeconds Int       @map("duration_seconds")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relationships
+  problem  Problem   @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  revision Revision? @relation(fields: [revisionId], references: [id], onDelete: SetNull)
+
+  @@index([problemId])
+  @@index([revisionId])
+  @@index([problemId, createdAt])
+  @@map("attempts")
+}
+
+model Assessment {
+  id                       String            @id @default(cuid())
+  problemId                String            @map("problem_id")
+  attemptNumber            Int               @map("attempt_number")
+  status                   AssessmentStatus  @default(PENDING)
+  startedAt                DateTime          @default(now()) @map("started_at")
+  completedAt              DateTime?         @map("completed_at")
+  durationSeconds          Int?              @map("duration_seconds")
+  selectedPattern          String?           @map("selected_pattern")
+  approachExplanation      String?           @map("approach_explanation") @db.Text
+  submittedTimeComplexity  String?           @map("submitted_time_complexity")
+  submittedSpaceComplexity String?           @map("submitted_space_complexity")
+
+  // Evaluation details
+  score                    Int?
+  isPatternCorrect         Boolean?          @map("is_pattern_correct")
+  isOptimalComplexity      Boolean?          @map("is_optimal_complexity")
+  feedback                 String?           @db.Text
+  evaluationDetails        Json?             @map("evaluation_details")
+
+  // Outcome
+  result                   AssessmentResult?
+  createdAt                DateTime          @default(now()) @map("created_at")
+  updatedAt                DateTime          @updatedAt @map("updated_at")
+
+  // Relationships
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([problemId, attemptNumber])
+  @@index([problemId])
+  @@index([status])
+  @@index([result])
+  @@map("assessments")
+}
+
+// ------------------------------------------------------------------------------
+// Infrastructure & Diagnostic Models
+// ------------------------------------------------------------------------------
+
+model HealthCheck {
+  id        String   @id @default(cuid())
+  status    String   @default("ok")
+  checkedAt DateTime @default(now()) @map("checked_at")
+
+  @@map("health_checks")
+}

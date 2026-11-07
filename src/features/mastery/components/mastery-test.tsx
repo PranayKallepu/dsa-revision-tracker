@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import {
   ArrowRight,
   Check,
@@ -17,15 +18,29 @@ import {
   Input,
   Label,
   Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
 } from "@/components/ui"
 import type { Screen } from "@/types/navigation"
 
 export interface MasteryTestProps {
-  setScreen: (s: Screen) => void
+  setScreen?: (s: Screen) => void
 }
 
 export function MasteryTest({ setScreen }: MasteryTestProps) {
+  const router = useRouter()
+
+  const navigate = (screen: Screen) => {
+    if (setScreen) {
+      setScreen(screen)
+    } else {
+      router.push("/dashboard")
+    }
+  }
+
   const [started, setStarted] = useState(false)
   const [complete, setComplete] = useState(false)
 
@@ -53,7 +68,7 @@ export function MasteryTest({ setScreen }: MasteryTestProps) {
             <div className="text-xs text-muted-foreground">Complexity</div>
           </div>
         </Card>
-        <Button className="mt-6" onClick={() => setScreen("dashboard")}>
+        <Button className="mt-6" onClick={() => navigate("dashboard")}>
           Return to dashboard
         </Button>
       </div>
@@ -135,10 +150,15 @@ export function MasteryTest({ setScreen }: MasteryTestProps) {
                 </div>
                 <div>
                   <Label>Confidence</Label>
-                  <Select>
-                    <option>High — fully independent</option>
-                    <option>Medium — some uncertainty</option>
-                    <option>Low — struggled significantly</option>
+                  <Select defaultValue="high">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select confidence" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">High — fully independent</SelectItem>
+                      <SelectItem value="medium">Medium — some uncertainty</SelectItem>
+                      <SelectItem value="low">Low — struggled significantly</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
               </div>

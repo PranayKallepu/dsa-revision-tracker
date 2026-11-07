@@ -1,5 +1,6 @@
-import { DsaMasteryApp } from "@/components/dsa-mastery-app";
+import { redirect } from "next/navigation"
 
-export default function Home() {
-  return <DsaMasteryApp />
+export default function RootPage() {
+  redirect("/dashboard")
 }
+
