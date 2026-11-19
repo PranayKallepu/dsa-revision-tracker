@@ -14,6 +14,8 @@ erDiagram
     User ||--o{ Topic : "creates"
     Problem ||--|{ ProblemTopic : "tagged with"
     Topic ||--|{ ProblemTopic : "categorizes"
+    Problem ||--o{ ProblemSolution : "has"
+    Problem ||--o{ ProblemBlocker : "tracks"
     Problem ||--o{ Revision : "schedules"
     Problem ||--o{ Attempt : "tracks"
     Problem ||--o{ Assessment : "evaluates"
@@ -36,15 +38,38 @@ erDiagram
         string url
         Platform platform
         Difficulty difficulty
+        ProblemSolvingStatus solvingStatus
         ProblemStatus status
-        string approach
-        string timeComplexity
-        string spaceComplexity
-        string notes
-        string mistakes
+        boolean isMastered
+        datetime masteredAt
+        int currentCycle
+        int timeSpentSeconds
         int initialSolveDurationSeconds
         datetime originalSolvedAt
         datetime archivedAt
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    ProblemSolution {
+        string id PK
+        string problemId FK
+        SolutionType solutionType
+        string approach
+        string timeComplexity
+        string spaceComplexity
+        string improvementNotes
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    ProblemBlocker {
+        string id PK
+        string problemId FK
+        string stuckPoint
+        string approachesTried
+        string conceptsToLearn
+        string failureReason
         datetime createdAt
         datetime updatedAt
     }
@@ -79,6 +104,7 @@ erDiagram
         string id PK
         string problemId FK
         string revisionId FK "nullable"
+        int cycleNumber
         int durationSeconds
         datetime createdAt
     }
@@ -124,8 +150,21 @@ erDiagram
 ### `Problem`
 - Represents a discrete DSA problem saved by a developer (e.g. from LeetCode, HackerRank, GeeksforGeeks).
 - Belongs strictly to one `User`.
-- Retains initial solve performance (`initialSolveDurationSeconds`) and immutable solve baseline (`originalSolvedAt`).
+- Tracks solving status independently via `solvingStatus` (`SOLVED` or `NOT_SOLVED`).
+- Tracks manual mastery independently via `isMastered` and `masteredAt`.
+- Tracks current active revision cycle via `currentCycle`.
+- Captures attempt time spent via `timeSpentSeconds` without conflating it with proof of solving.
 - Supports soft archiving via `archivedAt` timestamp.
+
+### `ProblemSolution`
+- Represents an approach to solving a solved problem (`BRUTE_FORCE` or `OPTIMIZED`).
+- Stored independently; adding an optimized solution never overwrites or deletes the brute-force solution.
+- Captures approach explanation, time complexity, space complexity, and optional improvement notes.
+
+### `ProblemBlocker`
+- Represents structured learning/blocker information recorded when a problem is `NOT_SOLVED`.
+- Captures where the developer got stuck (`stuckPoint`), approaches tried (`approachesTried`), concepts/patterns to learn (`conceptsToLearn`), and root cause failure reason (`failureReason`).
+- Keeps unsolved learning information completely separate from successful solution records.
 
 ### `Topic` & `ProblemTopic`
 - Categorization tags (e.g., "Sliding Window", "Dynamic Programming", "Heap").
@@ -161,6 +200,8 @@ erDiagram
 | User $\to$ Custom Topics | `User` | `Topic` | `Cascade` | Deletes user-defined tags; predefined tags remain untouched |
 | Problem $\to$ ProblemTopic | `Problem` | `ProblemTopic` | `Cascade` | Cleans up tag associations without deleting topics |
 | Topic $\to$ ProblemTopic | `Topic` | `ProblemTopic` | `Cascade` | Untags problems when topic is removed; leaves problems intact |
+| Problem $\to$ ProblemSolutions | `Problem` | `ProblemSolution` | `Cascade` | Solution records belong directly to the problem |
+| Problem $\to$ ProblemBlockers | `Problem` | `ProblemBlocker` | `Cascade` | Unsolved blocker and learning records belong directly to the problem |
 | Problem $\to$ Revisions | `Problem` | `Revision` | `Cascade` | Revision schedule belongs directly to the problem |
 | Problem $\to$ Attempts | `Problem` | `Attempt` | `Cascade` | Attempts belong directly to the problem |
 | Revision $\to$ Attempts | `Revision` | `Attempt` | `SetNull` | **Critical**: Pruning or cancelling a revision never destroys attempt solve logs |

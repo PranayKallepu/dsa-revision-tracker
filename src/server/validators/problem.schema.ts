@@ -1,6 +1,6 @@
 import "server-only"
 import { z } from "zod"
-import { Difficulty, Platform, ProblemStatus } from "@prisma/client"
+import { Difficulty, Platform, ProblemSolvingStatus, ProblemStatus, SolutionType } from "@prisma/client"
 import { paginationQuerySchema } from "./validate"
 
 // Helper to normalize difficulty input to Prisma Difficulty enum
@@ -32,6 +32,32 @@ export const platformInputSchema = z.preprocess((val) => {
   message: "Platform must be a recognized platform (LeetCode, GeeksforGeeks, HackerRank, Codeforces, InterviewBit, or Other)",
 }))
 
+// Helper to normalize problem solving status
+export const problemSolvingStatusInputSchema = z.preprocess((val) => {
+  if (typeof val === "string") {
+    const upper = val.toUpperCase().trim()
+    if (upper === "SOLVED") return ProblemSolvingStatus.SOLVED
+    if (upper === "NOT_SOLVED" || upper === "NOTSOLVED" || upper === "UNSOLVED") {
+      return ProblemSolvingStatus.NOT_SOLVED
+    }
+  }
+  return val
+}, z.nativeEnum(ProblemSolvingStatus, {
+  message: "Solving status must be SOLVED or NOT_SOLVED",
+}))
+
+// Helper to normalize solution type
+export const solutionTypeInputSchema = z.preprocess((val) => {
+  if (typeof val === "string") {
+    const cleaned = val.toUpperCase().replace(/[\s\-_]/g, "_").trim()
+    if (cleaned === "BRUTE_FORCE" || cleaned === "BRUTEFORCE") return SolutionType.BRUTE_FORCE
+    if (cleaned === "OPTIMIZED" || cleaned === "OPTIMAL") return SolutionType.OPTIMIZED
+  }
+  return val
+}, z.nativeEnum(SolutionType, {
+  message: "Solution type must be BRUTE_FORCE or OPTIMIZED",
+}))
+
 // Helper to normalize status input to Prisma ProblemStatus enum
 export const problemStatusInputSchema = z.preprocess((val) => {
   if (typeof val === "string") {
@@ -45,6 +71,29 @@ export const problemStatusInputSchema = z.preprocess((val) => {
 }, z.nativeEnum(ProblemStatus, {
   message: "Status must be Learning, Mastered, Overdue, or Archived",
 }))
+
+// Schema for individual solution record
+export const problemSolutionInputSchema = z.object({
+  id: z.string().optional(),
+  solutionType: solutionTypeInputSchema,
+  approach: z.string().trim().min(1, "Approach explanation is required"),
+  timeComplexity: z.string().trim().optional().nullable(),
+  spaceComplexity: z.string().trim().optional().nullable(),
+  improvementNotes: z.string().trim().optional().nullable(),
+})
+
+export type ProblemSolutionInput = z.infer<typeof problemSolutionInputSchema>
+
+// Schema for unsolved blocker / learning information
+export const problemBlockerInputSchema = z.object({
+  id: z.string().optional(),
+  stuckPoint: z.string().trim().optional().nullable(),
+  approachesTried: z.string().trim().optional().nullable(),
+  conceptsToLearn: z.string().trim().optional().nullable(),
+  failureReason: z.string().trim().optional().nullable(),
+})
+
+export type ProblemBlockerInput = z.infer<typeof problemBlockerInputSchema>
 
 /**
  * URL validator that allows both bare domains (leetcode.com/...) and full URLs (https://...)
@@ -79,10 +128,16 @@ export const createProblemSchema = z.object({
   url: urlSchema,
   platform: platformInputSchema,
   difficulty: difficultyInputSchema,
-  status: problemStatusInputSchema.optional().default(ProblemStatus.LEARNING),
+  solvingStatus: problemSolvingStatusInputSchema.optional(),
+  status: problemStatusInputSchema.optional(),
+  isMastered: z.boolean().optional(),
   topics: z
     .array(z.string().trim().min(1, "Topic name cannot be empty"))
     .min(1, "Please provide at least one topic tag"),
+  timeSpentSeconds: z.preprocess((val) => {
+    if (val === undefined || val === null || val === "") return undefined
+    return Number(val)
+  }, z.number().int().min(0, "Time spent cannot be negative").max(86400, "Time spent cannot exceed 24 hours").optional().nullable()),
   approach: z.string().trim().optional().nullable(),
   timeComplexity: z.string().trim().optional().nullable(),
   spaceComplexity: z.string().trim().optional().nullable(),
@@ -103,7 +158,11 @@ export const createProblemSchema = z.object({
       return isNaN(parsed.getTime()) ? undefined : parsed
     }
     return val
-  }, z.date().optional()),
+  }, z.date().optional().nullable()),
+  solutions: z.array(problemSolutionInputSchema).optional(),
+  solution: problemSolutionInputSchema.optional(),
+  blockers: z.array(problemBlockerInputSchema).optional(),
+  blocker: problemBlockerInputSchema.optional(),
 }).strict()
 
 export type CreateProblemInput = z.infer<typeof createProblemSchema>
@@ -157,6 +216,25 @@ export const listProblemsQuerySchema = paginationQuerySchema.extend({
     }
     return undefined
   }, z.nativeEnum(ProblemStatus).optional()),
+  solvingStatus: z.preprocess((val) => {
+    if (typeof val === "string" && val.toUpperCase() !== "ALL") {
+      const upper = val.toUpperCase().trim()
+      if (upper === "SOLVED") return ProblemSolvingStatus.SOLVED
+      if (upper === "NOT_SOLVED" || upper === "NOTSOLVED" || upper === "UNSOLVED") {
+        return ProblemSolvingStatus.NOT_SOLVED
+      }
+    }
+    return undefined
+  }, z.nativeEnum(ProblemSolvingStatus).optional()),
+  isMastered: z.preprocess((val) => {
+    if (typeof val === "string") {
+      const lower = val.toLowerCase().trim()
+      if (lower === "true" || lower === "1") return true
+      if (lower === "false" || lower === "0") return false
+    }
+    if (typeof val === "boolean") return val
+    return undefined
+  }, z.boolean().optional()),
   archived: z.preprocess((val) => {
     if (typeof val === "string") {
       const lower = val.toLowerCase().trim()
