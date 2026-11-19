@@ -20,7 +20,7 @@ import {
   RotateCcw,
   Sparkles,
 } from "lucide-react"
-import { Badge, Button, Card } from "@/components/ui"
+import { Badge, Button, Card, toast } from "@/components/ui"
 import { DifficultyBadge } from "@/components/shared/difficulty-badge"
 import { useProblems } from "@/hooks/use-problems"
 import { cn } from "@/lib/utils"
@@ -70,8 +70,10 @@ export function ProblemDetails({
     if (!resolvedProblem) return
     if (resolvedProblem.status === "Archived") {
       restoreProblem(resolvedProblem.id)
+      toast.success("Problem restored to active queue")
     } else {
       archiveProblem(resolvedProblem.id)
+      toast.success("Problem moved to archive")
     }
   }
 

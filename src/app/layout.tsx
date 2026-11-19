@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import { SessionProvider } from "@/components/providers/session-provider"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -14,7 +15,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          {children}
+          <Toaster />
+        </SessionProvider>
       </body>
     </html>
   )

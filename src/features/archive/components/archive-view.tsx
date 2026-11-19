@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Archive, ArrowLeft, CircleHelp, Eye, RotateCcw } from "lucide-react"
-import { Badge, Button, Card } from "@/components/ui"
+import { Badge, Button, Card, toast } from "@/components/ui"
 import { DifficultyBadge } from "@/components/shared/difficulty-badge"
 import type { Problem } from "@/types/problem"
 
@@ -103,7 +103,10 @@ export function ArchiveView({ items, restore }: ArchiveViewProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => restore(p.id)}
+                    onClick={() => {
+                      restore(p.id)
+                      toast.success("Problem restored to active queue")
+                    }}
                     className="text-primary hover:text-primary"
                   >
                     <RotateCcw className="size-4 mr-1.5" />

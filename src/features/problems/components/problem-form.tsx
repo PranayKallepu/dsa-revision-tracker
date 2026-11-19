@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
+  toast,
 } from "@/components/ui"
 import { useProblems } from "@/hooks/use-problems"
 import {
@@ -36,9 +37,17 @@ import {
   PLATFORMS,
   problemFormSchema,
   type ProblemFormValues,
+  TIME_COMPLEXITY_OPTIONS,
+  SPACE_COMPLEXITY_OPTIONS,
 } from "../schema"
 import type { Difficulty, Platform, Problem } from "@/types/problem"
 import type { Screen } from "@/types/navigation"
+
+const isKnownTimePreset = (val: string) =>
+  TIME_COMPLEXITY_OPTIONS.some((opt) => opt.value !== "Other" && opt.value === val)
+
+const isKnownSpacePreset = (val: string) =>
+  SPACE_COMPLEXITY_OPTIONS.some((opt) => opt.value !== "Other" && opt.value === val)
 
 export interface ProblemFormProps {
   problemId?: string | number
@@ -89,24 +98,25 @@ export function ProblemForm({
       : 30,
   )
   const [approach, setApproach] = useState(
-    resolvedProblem?.approach ||
-      "",
+    resolvedProblem?.approach || "",
   )
-  const [timeComplexity, setTimeComplexity] = useState(
-    resolvedProblem?.timeComplexity ||
-      "",
-  )
-  const [spaceComplexity, setSpaceComplexity] = useState(
-    resolvedProblem?.spaceComplexity ||
-      "",
-  )
+  const initialTime = resolvedProblem?.timeComplexity || ""
+  const initialTimeIsCustom = Boolean(initialTime && !isKnownTimePreset(initialTime))
+  const [timeComplexity, setTimeComplexity] = useState(initialTime)
+  const [isCustomTime, setIsCustomTime] = useState(initialTimeIsCustom)
+  const [customTime, setCustomTime] = useState(initialTimeIsCustom ? initialTime : "")
+
+  const initialSpace = resolvedProblem?.spaceComplexity || ""
+  const initialSpaceIsCustom = Boolean(initialSpace && !isKnownSpacePreset(initialSpace))
+  const [spaceComplexity, setSpaceComplexity] = useState(initialSpace)
+  const [isCustomSpace, setIsCustomSpace] = useState(initialSpaceIsCustom)
+  const [customSpace, setCustomSpace] = useState(initialSpaceIsCustom ? initialSpace : "")
+
   const [notes, setNotes] = useState(
-    resolvedProblem?.notes ||
-      "",
+    resolvedProblem?.notes || "",
   )
   const [mistakes, setMistakes] = useState(
-    resolvedProblem?.mistakes ||
-      "",
+    resolvedProblem?.mistakes || "",
   )
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -118,32 +128,31 @@ export function ProblemForm({
       setPlatform(resolvedProblem.platform)
       setDifficulty(resolvedProblem.difficulty)
       setTopics(
-        resolvedProblem.topics ||
-          [],
+        resolvedProblem.topics || [],
       )
       setTime(
-        resolvedProblem.time ??
-          30,
+        resolvedProblem.time ?? 30,
       )
       setApproach(
-        resolvedProblem.approach ||
-          "",
+        resolvedProblem.approach || "",
       )
-      setTimeComplexity(
-        resolvedProblem.timeComplexity ||
-          "",
-      )
-      setSpaceComplexity(
-        resolvedProblem.spaceComplexity ||
-          "",
-      )
+      const timeVal = resolvedProblem.timeComplexity || ""
+      const timeCustom = Boolean(timeVal && !isKnownTimePreset(timeVal))
+      setTimeComplexity(timeVal)
+      setIsCustomTime(timeCustom)
+      setCustomTime(timeCustom ? timeVal : "")
+
+      const spaceVal = resolvedProblem.spaceComplexity || ""
+      const spaceCustom = Boolean(spaceVal && !isKnownSpacePreset(spaceVal))
+      setSpaceComplexity(spaceVal)
+      setIsCustomSpace(spaceCustom)
+      setCustomSpace(spaceCustom ? spaceVal : "")
+
       setNotes(
-        resolvedProblem.notes ||
-          "",
+        resolvedProblem.notes || "",
       )
       setMistakes(
-        resolvedProblem.mistakes ||
-          "",
+        resolvedProblem.mistakes || "",
       )
     }
   }, [resolvedProblem, isEdit])
@@ -221,6 +230,7 @@ export function ProblemForm({
         }
       }
       setErrors(fieldErrors)
+      toast.error("Please fill in all required fields correctly.")
       setIsSubmitting(false)
       return
     }
@@ -588,21 +598,99 @@ export function ProblemForm({
           <div className="grid gap-5 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="time-complexity">Time Complexity</Label>
-              <Input
-                id="time-complexity"
-                placeholder="e.g. O(n log n)"
-                value={timeComplexity}
-                onChange={(e) => setTimeComplexity(e.target.value)}
-              />
+              <Select
+                value={
+                  isCustomTime
+                    ? "Other"
+                    : timeComplexity || "none"
+                }
+                onValueChange={(val) => {
+                  if (val === "Other") {
+                    setIsCustomTime(true)
+                    setTimeComplexity(customTime)
+                  } else if (val === "none") {
+                    setIsCustomTime(false)
+                    setTimeComplexity("")
+                  } else {
+                    setIsCustomTime(false)
+                    setTimeComplexity(val)
+                  }
+                }}
+              >
+                <SelectTrigger id="time-complexity">
+                  <SelectValue placeholder="Select Time Complexity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    <span className="text-muted-foreground">Not specified</span>
+                  </SelectItem>
+                  {TIME_COMPLEXITY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isCustomTime && (
+                <Input
+                  className="mt-2 font-mono text-xs"
+                  placeholder="e.g. O(min(n, m)) or O(k)"
+                  value={customTime}
+                  onChange={(e) => {
+                    setCustomTime(e.target.value)
+                    setTimeComplexity(e.target.value)
+                  }}
+                  autoFocus
+                />
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="space-complexity">Space Complexity</Label>
-              <Input
-                id="space-complexity"
-                placeholder="e.g. O(1) or O(n)"
-                value={spaceComplexity}
-                onChange={(e) => setSpaceComplexity(e.target.value)}
-              />
+              <Select
+                value={
+                  isCustomSpace
+                    ? "Other"
+                    : spaceComplexity || "none"
+                }
+                onValueChange={(val) => {
+                  if (val === "Other") {
+                    setIsCustomSpace(true)
+                    setSpaceComplexity(customSpace)
+                  } else if (val === "none") {
+                    setIsCustomSpace(false)
+                    setSpaceComplexity("")
+                  } else {
+                    setIsCustomSpace(false)
+                    setSpaceComplexity(val)
+                  }
+                }}
+              >
+                <SelectTrigger id="space-complexity">
+                  <SelectValue placeholder="Select Space Complexity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    <span className="text-muted-foreground">Not specified</span>
+                  </SelectItem>
+                  {SPACE_COMPLEXITY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isCustomSpace && (
+                <Input
+                  className="mt-2 font-mono text-xs"
+                  placeholder="e.g. O(k) or O(V + E)"
+                  value={customSpace}
+                  onChange={(e) => {
+                    setCustomSpace(e.target.value)
+                    setSpaceComplexity(e.target.value)
+                  }}
+                  autoFocus
+                />
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="solving-time">Initial Solving Time (mins)</Label>
@@ -667,8 +755,8 @@ export function ProblemForm({
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          <Check className="size-4 mr-1.5" />
+        <Button type="submit" disabled={isSubmitting} loading={isSubmitting}>
+          {!isSubmitting && <Check className="size-4 mr-1.5" />}
           {isEdit ? "Update Problem" : "Save Problem"}
         </Button>
       </div>
