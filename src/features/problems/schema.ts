@@ -1,4 +1,21 @@
 import { z } from "zod"
+import {
+  TIME_COMPLEXITIES,
+  TIME_COMPLEXITY_OPTIONS,
+  type TimeComplexity,
+  SPACE_COMPLEXITIES,
+  SPACE_COMPLEXITY_OPTIONS,
+  type SpaceComplexity,
+} from "@/types/problem"
+
+export {
+  TIME_COMPLEXITIES,
+  TIME_COMPLEXITY_OPTIONS,
+  type TimeComplexity,
+  SPACE_COMPLEXITIES,
+  SPACE_COMPLEXITY_OPTIONS,
+  type SpaceComplexity,
+}
 
 export const PLATFORMS = [
   "LeetCode",
