@@ -43,6 +43,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  toast,
 } from "@/components/ui"
 import { ProblemsTable } from "./problems-table"
 import { useProblems } from "@/hooks/use-problems"
@@ -63,6 +64,16 @@ export function ProblemsView({
 }: ProblemsViewProps) {
   const router = useRouter()
   const { items: contextItems, archiveProblem, restoreProblem } = useProblems()
+
+  const handleArchive = (id: number) => {
+    archiveProblem(id)
+    toast.success("Problem archived")
+  }
+
+  const handleRestore = (id: number) => {
+    restoreProblem(id)
+    toast.success("Problem restored to active list")
+  }
   const items =
     propItems ||
     contextItems
@@ -450,8 +461,8 @@ export function ProblemsView({
               items={paginatedItems}
               onView={handleDetails}
               onEdit={handleEdit}
-              onArchive={archiveProblem}
-              onRestore={restoreProblem}
+              onArchive={handleArchive}
+              onRestore={handleRestore}
             />
 
             {}

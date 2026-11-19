@@ -44,6 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
+  toast,
 } from "@/components/ui"
 import { useProblems } from "@/hooks/use-problems"
 import {
@@ -246,6 +247,7 @@ export function ProblemForm({
         }
       }
       setErrors(fieldErrors)
+      toast.error("Please fill in all required fields correctly.")
       setIsSubmitting(false)
       return
     }
@@ -266,6 +268,7 @@ export function ProblemForm({
         notes: validData.notes,
         mistakes: validData.mistakes,
       })
+      toast.success("Problem updated successfully!")
 
       if (setScreen) {
         setScreen("problems")
@@ -290,6 +293,7 @@ export function ProblemForm({
         revision: 0,
         attempts: [],
       })
+      toast.success("Problem added to your revision list!")
 
       if (setScreen) {
         setScreen("problems")
@@ -755,8 +759,8 @@ export function ProblemForm({
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          <Check className="size-4 mr-1.5" />
+        <Button type="submit" disabled={isSubmitting} loading={isSubmitting}>
+          {!isSubmitting && <Check className="size-4 mr-1.5" />}
           {isEdit ? "Update Problem" : "Save Problem"}
         </Button>
       </div>

@@ -12,7 +12,7 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react"
-import { Badge, Button, Card, Input, Label } from "@/components/ui"
+import { Badge, Button, Card, Input, Label, toast } from "@/components/ui"
 import { Brand } from "@/components/layout/brand"
 
 export interface AuthScreenProps {
@@ -167,6 +167,7 @@ export function AuthScreen({ close, initialMode = "login" }: AuthScreenProps) {
           router.push("/dashboard")
           router.refresh()
         }
+        toast.success("Account created successfully! Welcome.")
       } else {
         // Credentials Login
         const result = await signIn("credentials", {
@@ -177,6 +178,7 @@ export function AuthScreen({ close, initialMode = "login" }: AuthScreenProps) {
 
         if (result?.error) {
           setErrorMessage("Invalid email or password. Please review your credentials.")
+          toast.error("Invalid email or password.")
           setIsLoading(false)
           return
         }
@@ -187,6 +189,7 @@ export function AuthScreen({ close, initialMode = "login" }: AuthScreenProps) {
           router.push("/dashboard")
           router.refresh()
         }
+        toast.success("Signed in successfully!")
       }
     } catch {
       setErrorMessage("An unexpected network error occurred. Please try again.")
