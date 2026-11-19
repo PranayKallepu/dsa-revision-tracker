@@ -27,6 +27,16 @@ interface ProblemsContextType {
   refreshProblems: () => Promise<void>
   addProblem: (problem: Omit<Problem, "id"> | Problem) => Promise<Problem>
   updateProblem: (id: number | string, data: Partial<Problem>) => Promise<Problem | null>
+  addSolution: (
+    problemId: number | string,
+    solution: {
+      solutionType: "BRUTE_FORCE" | "OPTIMIZED"
+      approach: string
+      timeComplexity?: string | null
+      spaceComplexity?: string | null
+      improvementNotes?: string | null
+    },
+  ) => Promise<any>
   archiveProblem: (id: number | string) => Promise<void>
   restoreProblem: (id: number | string) => Promise<void>
   getProblemById: (id: number | string) => Problem | undefined
@@ -83,7 +93,7 @@ export function ProblemsProvider({ children }: { children: React.ReactNode }) {
 
   const addProblem = async (problemData: Omit<Problem, "id"> | Problem): Promise<Problem> => {
     try {
-      const payload = {
+      const payload: Record<string, any> = {
         title: problemData.title,
         url: problemData.url,
         platform: problemData.platform,
@@ -98,6 +108,12 @@ export function ProblemsProvider({ children }: { children: React.ReactNode }) {
         time: problemData.time,
         initialSolveDurationSeconds: problemData.initialSolveDurationSeconds,
       }
+      if (problemData.solvingStatus) payload.solvingStatus = problemData.solvingStatus
+      if (problemData.timeSpentSeconds !== undefined) payload.timeSpentSeconds = problemData.timeSpentSeconds
+      if (problemData.solutions) payload.solutions = problemData.solutions
+      if ((problemData as any).solution) payload.solution = (problemData as any).solution
+      if (problemData.blockers) payload.blockers = problemData.blockers
+      if ((problemData as any).blocker) payload.blocker = (problemData as any).blocker
 
       const res = await fetch("/api/problems", {
         method: "POST",
@@ -128,7 +144,7 @@ export function ProblemsProvider({ children }: { children: React.ReactNode }) {
     data: Partial<Problem>,
   ): Promise<Problem | null> => {
     try {
-      const payload = {
+      const payload: Record<string, any> = {
         title: data.title,
         url: data.url,
         platform: data.platform,
@@ -143,6 +159,12 @@ export function ProblemsProvider({ children }: { children: React.ReactNode }) {
         time: data.time,
         initialSolveDurationSeconds: data.initialSolveDurationSeconds,
       }
+      if (data.solvingStatus) payload.solvingStatus = data.solvingStatus
+      if (data.timeSpentSeconds !== undefined) payload.timeSpentSeconds = data.timeSpentSeconds
+      if (data.solutions) payload.solutions = data.solutions
+      if ((data as any).solution) payload.solution = (data as any).solution
+      if (data.blockers) payload.blockers = data.blockers
+      if ((data as any).blocker) payload.blocker = (data as any).blocker
 
       const res = await fetch(`/api/problems/${id}`, {
         method: "PATCH",
@@ -165,6 +187,41 @@ export function ProblemsProvider({ children }: { children: React.ReactNode }) {
         prev.map((item) => (String(item.id) === String(id) ? updated : item)),
       )
       return updated
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const addSolution = async (
+    problemId: number | string,
+    solutionData: {
+      solutionType: "BRUTE_FORCE" | "OPTIMIZED"
+      approach: string
+      timeComplexity?: string | null
+      spaceComplexity?: string | null
+      improvementNotes?: string | null
+    },
+  ) => {
+    try {
+      const res = await fetch(`/api/problems/${problemId}/solutions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(solutionData),
+      })
+
+      const json = await res.json().catch(() => ({}))
+
+      if (!res.ok || !json.success) {
+        const errorMsg =
+          json?.error?.details?.[0]?.message ||
+          json?.error?.message ||
+          "Failed to add solution on server"
+        throw new Error(errorMsg)
+      }
+
+      // Re-fetch problems to have synchronized relation data
+      await fetchProblems()
+      return json.data
     } catch (err) {
       throw err
     }
@@ -326,12 +383,18 @@ export function ProblemsProvider({ children }: { children: React.ReactNode }) {
       (p) =>
         p.status !== "Archived" &&
         p.status !== "Mastered" &&
-        p.nextRevision.toLowerCase() === "today",
+        p.solvingStatus !== "NOT_SOLVED" &&
+        p.nextRevision?.toLowerCase() === "today",
     )
   }
 
   const getOverdueRevisions = () => {
-    return items.filter((p) => p.status !== "Archived" && p.status === "Overdue")
+    return items.filter(
+      (p) =>
+        p.status !== "Archived" &&
+        p.solvingStatus !== "NOT_SOLVED" &&
+        p.status === "Overdue",
+    )
   }
 
   return (
@@ -344,6 +407,7 @@ export function ProblemsProvider({ children }: { children: React.ReactNode }) {
         refreshProblems: fetchProblems,
         addProblem,
         updateProblem,
+        addSolution,
         archiveProblem,
         restoreProblem,
         getProblemById,
@@ -372,6 +436,7 @@ export function useProblems() {
     refreshProblems: async () => {},
     addProblem: async (p: Problem | Omit<Problem, "id">) => p as Problem,
     updateProblem: async () => null,
+    addSolution: async () => null,
     archiveProblem: async () => {},
     restoreProblem: async () => {},
     getProblemById: () => undefined,

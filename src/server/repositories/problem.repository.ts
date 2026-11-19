@@ -247,6 +247,7 @@ export class ProblemRepository extends BaseRepository {
         improvementNotes?: string | null
       }>
       blockers?: Array<{
+        id?: string
         stuckPoint?: string | null
         approachesTried?: string | null
         conceptsToLearn?: string | null
@@ -255,7 +256,8 @@ export class ProblemRepository extends BaseRepository {
     },
     topicIds: string[],
   ): Promise<ProblemWithRelations> {
-    return this.db.$transaction(async (tx) => {
+    return this.db.$transaction(
+      async (tx) => {
       const problem = await tx.problem.create({
         data: {
           userId,
@@ -324,7 +326,7 @@ export class ProblemRepository extends BaseRepository {
       })
 
       return problem
-    })
+    }, { maxWait: 15000, timeout: 30000 })
   }
 
   /**
@@ -359,6 +361,7 @@ export class ProblemRepository extends BaseRepository {
         improvementNotes?: string | null
       }>
       blockers?: Array<{
+        id?: string
         stuckPoint?: string | null
         approachesTried?: string | null
         conceptsToLearn?: string | null
@@ -377,7 +380,8 @@ export class ProblemRepository extends BaseRepository {
       return null
     }
 
-    return this.db.$transaction(async (tx) => {
+    return this.db.$transaction(
+      async (tx) => {
       // If new topicIds were provided, replace topic associations
       if (topicIds !== undefined) {
         await tx.problemTopic.deleteMany({
@@ -408,17 +412,47 @@ export class ProblemRepository extends BaseRepository {
         })
       }
 
-      // If new blockers were provided, create them
+      // If blockers were provided, update existing or create
       if (data.blockers && data.blockers.length > 0) {
-        await tx.problemBlocker.createMany({
-          data: data.blockers.map((blk) => ({
-            problemId: id,
-            stuckPoint: blk.stuckPoint,
-            approachesTried: blk.approachesTried,
-            conceptsToLearn: blk.conceptsToLearn,
-            failureReason: blk.failureReason,
-          })),
-        })
+        for (const blk of data.blockers) {
+          if (blk.id) {
+            await tx.problemBlocker.update({
+              where: { id: blk.id },
+              data: {
+                stuckPoint: blk.stuckPoint,
+                approachesTried: blk.approachesTried,
+                conceptsToLearn: blk.conceptsToLearn,
+                failureReason: blk.failureReason,
+              },
+            })
+          } else {
+            const existingBlocker = await tx.problemBlocker.findFirst({
+              where: { problemId: id },
+              orderBy: { createdAt: "desc" },
+            })
+            if (existingBlocker) {
+              await tx.problemBlocker.update({
+                where: { id: existingBlocker.id },
+                data: {
+                  stuckPoint: blk.stuckPoint,
+                  approachesTried: blk.approachesTried,
+                  conceptsToLearn: blk.conceptsToLearn,
+                  failureReason: blk.failureReason,
+                },
+              })
+            } else {
+              await tx.problemBlocker.create({
+                data: {
+                  problemId: id,
+                  stuckPoint: blk.stuckPoint,
+                  approachesTried: blk.approachesTried,
+                  conceptsToLearn: blk.conceptsToLearn,
+                  failureReason: blk.failureReason,
+                },
+              })
+            }
+          }
+        }
       }
 
       const updated = await tx.problem.update({
@@ -469,7 +503,7 @@ export class ProblemRepository extends BaseRepository {
       })
 
       return updated
-    })
+    }, { maxWait: 15000, timeout: 30000 })
   }
 
   /**

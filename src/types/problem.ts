@@ -179,7 +179,11 @@ export interface Problem {
 
   solutions?: ProblemSolution[]
 
+  solution?: any
+
   blockers?: ProblemBlocker[]
+
+  blocker?: any
 
   nextRevision: string
 

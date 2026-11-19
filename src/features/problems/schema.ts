@@ -53,45 +53,64 @@ export const COMMON_TOPICS = [
   "Topological Sort",
 ] as const
 
-export const problemFormSchema = z.object({
-  title: z
-    .string()
-    .trim()
-    .min(1, "Problem title is required")
-    .max(200, "Title must be under 200 characters"),
-  url: z
-    .string()
-    .trim()
-    .min(1, "Problem URL is required")
-    .refine((val) => {
-      try {
-        const testUrl =
-          val.startsWith("http://") || val.startsWith("https://")
-            ? val
-            : `https://${val}`
-        const parsed = new URL(testUrl)
-        return parsed.hostname.includes(".")
-      } catch {
-        return false
+export const problemFormSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(1, "Problem title is required")
+      .max(200, "Title must be under 200 characters"),
+    url: z
+      .string()
+      .trim()
+      .min(1, "Problem URL is required")
+      .refine((val) => {
+        try {
+          const testUrl =
+            val.startsWith("http://") || val.startsWith("https://")
+              ? val
+              : `https://${val}`
+          const parsed = new URL(testUrl)
+          return parsed.hostname.includes(".")
+        } catch {
+          return false
+        }
+      }, "Please enter a valid URL (e.g. https://leetcode.com/problems/...)"),
+    platform: z.string().min(1, "Platform selection is required"),
+    difficulty: z.enum(DIFFICULTIES, {
+      message: "Difficulty must be Easy, Medium, or Hard",
+    }),
+    topics: z
+      .array(z.string())
+      .min(1, "Please select or add at least one topic tag"),
+    time: z.coerce
+      .number({ message: "Time spent must be a valid number" })
+      .positive("Time spent must be greater than 0 minutes")
+      .max(1440, "Duration seems excessively high (max 1440 mins)"),
+    solvingStatus: z.enum(["SOLVED", "NOT_SOLVED"]).default("SOLVED"),
+    solutionType: z.enum(["BRUTE_FORCE", "OPTIMIZED"]).optional().default("BRUTE_FORCE"),
+    approach: z.string().optional().default(""),
+    timeComplexity: z.string().optional().default(""),
+    spaceComplexity: z.string().optional().default(""),
+    improvementNotes: z.string().optional().default(""),
+    notes: z.string().optional().default(""),
+    mistakes: z.string().optional().default(""),
+    stuckPoint: z.string().optional().default(""),
+    approachesTried: z.string().optional().default(""),
+    conceptsToLearn: z.string().optional().default(""),
+    failureReason: z.string().optional().default(""),
+  })
+  .superRefine((data, ctx) => {
+    if (data.solvingStatus === "SOLVED") {
+      if (!data.approach || data.approach.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Approach explanation is required for solved problems",
+          path: ["approach"],
+        })
       }
-    }, "Please enter a valid URL (e.g. https://leetcode.com/problems/...)"),
-  platform: z.string().min(1, "Platform selection is required"),
-  difficulty: z.enum(DIFFICULTIES, {
-    message: "Difficulty must be Easy, Medium, or Hard",
-  }),
-  topics: z
-    .array(z.string())
-    .min(1, "Please select or add at least one topic tag"),
-  time: z.coerce
-    .number({ message: "Solving duration must be a valid number" })
-    .min(0, "Duration cannot be negative")
-    .max(1440, "Duration seems excessively high (max 1440 mins)"),
-  approach: z.string().optional().default(""),
-  timeComplexity: z.string().optional().default(""),
-  spaceComplexity: z.string().optional().default(""),
-  notes: z.string().optional().default(""),
-  mistakes: z.string().optional().default(""),
-})
+    }
+  })
 
 export type ProblemFormValues = z.infer<typeof problemFormSchema>
 

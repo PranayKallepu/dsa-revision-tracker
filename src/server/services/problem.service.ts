@@ -240,16 +240,18 @@ export class ProblemService {
     const solvingStatus = input.solvingStatus || ProblemSolvingStatus.SOLVED
     const isSolved = solvingStatus === ProblemSolvingStatus.SOLVED
 
-    // For NOT_SOLVED, initialSolveDurationSeconds and originalSolvedAt are null
+    // For NOT_SOLVED, initialSolveDurationSeconds and originalSolvedAt are null.
+    // For SOLVED, originalSolvedAt is strictly generated server-side.
     const initialSolveDuration = isSolved ? durationSeconds : null
-    const originalSolvedAt = isSolved
-      ? (input.originalSolvedAt || new Date())
-      : null
+    const originalSolvedAt = isSolved ? new Date() : null
 
-    // Normalize solutions from array or singular
-    const solutions = input.solutions || (input.solution ? [input.solution] : [])
-    // Normalize blockers from array or singular
-    const blockers = input.blockers || (input.blocker ? [input.blocker] : [])
+    // For SOLVED, include solutions; for NOT_SOLVED, include blockers
+    const solutions = isSolved
+      ? (input.solutions || (input.solution ? [input.solution] : []))
+      : []
+    const blockers = !isSolved
+      ? (input.blockers || (input.blocker ? [input.blocker] : []))
+      : []
 
     // Resolve or create topic tag records
     const topicIds = await problemRepository.resolveOrCreateTopics(userId, input.topics)
@@ -308,14 +310,16 @@ export class ProblemService {
       durationSeconds = Math.round(input.time * 60)
     }
 
-    // If transitioning from NOT_SOLVED to SOLVED and originalSolvedAt not specified, set to now
-    let originalSolvedAt = input.originalSolvedAt
-    if (
-      input.solvingStatus === ProblemSolvingStatus.SOLVED &&
-      existing.solvingStatus === ProblemSolvingStatus.NOT_SOLVED &&
-      originalSolvedAt === undefined
-    ) {
-      originalSolvedAt = new Date()
+    // If transitioning from NOT_SOLVED to SOLVED, assign server-side timestamp
+    let originalSolvedAt: Date | null | undefined = undefined
+    if (input.solvingStatus === ProblemSolvingStatus.SOLVED) {
+      if (existing.solvingStatus === ProblemSolvingStatus.NOT_SOLVED || !existing.originalSolvedAt) {
+        originalSolvedAt = new Date()
+      } else {
+        originalSolvedAt = existing.originalSolvedAt
+      }
+    } else if (input.solvingStatus === ProblemSolvingStatus.NOT_SOLVED) {
+      originalSolvedAt = null
     }
 
     // Normalize solutions from array or singular
@@ -365,6 +369,15 @@ export class ProblemService {
     }
 
     const created = await problemRepository.addSolution(problemId, userId, solution)
+
+    // If problem was unsolved, promote it to SOLVED with server timestamp
+    if (existing.solvingStatus === ProblemSolvingStatus.NOT_SOLVED) {
+      await problemRepository.update(problemId, userId, {
+        solvingStatus: ProblemSolvingStatus.SOLVED,
+        originalSolvedAt: new Date(),
+      })
+    }
+
     return created
   }
 
