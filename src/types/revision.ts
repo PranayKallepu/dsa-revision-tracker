@@ -7,7 +7,7 @@ export type RevisionStatus = "pending" | "completed" | "overdue"
  */
 export interface Revision {
   id: string
-  problemId: number
+  problemId: string | number
   revisionNumber: number
   scheduledDate: string // e.g. "Today", "Jun 12", or ISO string
   completionDate?: string
@@ -23,7 +23,7 @@ export interface Revision {
  */
 export interface Attempt {
   id: string | number
-  problemId?: number
+  problemId?: string | number
   revisionNumber?: number
   revisionId?: string
   duration?: number // in minutes

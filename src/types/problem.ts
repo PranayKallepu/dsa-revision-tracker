@@ -74,7 +74,7 @@ export type SpaceComplexity = (typeof SPACE_COMPLEXITIES)[number]
 export type RevisionAttempt = Attempt
 
 export interface Problem {
-  id: number
+  id: number | string
   title: string
   url: string
   difficulty: Difficulty
@@ -84,6 +84,7 @@ export interface Problem {
   nextRevision: string
   revision: number
   time: number // initial solving duration in minutes
+  initialSolveDurationSeconds?: number | null
   approach?: string
   timeComplexity?: TimeComplexity | string
   spaceComplexity?: SpaceComplexity | string
@@ -91,6 +92,7 @@ export interface Problem {
   mistakes?: string
   lastRevisionDate?: string
   originalSolveDate?: string
+  archivedAt?: string | null
   attempts?: Attempt[]
   revisions?: Revision[]
   createdAt?: string

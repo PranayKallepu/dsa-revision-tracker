@@ -68,7 +68,7 @@ export function getOverdueProblems(problems: Problem[]): OverdueProblemItem[] {
     .filter((p) => p.status !== "Archived" && p.status === "Overdue")
     .map((p) => ({
       problem: p,
-      daysOverdue: defaultOverdueDaysMap[p.id] ?? 2,
+      daysOverdue: defaultOverdueDaysMap[Number(p.id)] ?? 2,
     }))
 }
 
