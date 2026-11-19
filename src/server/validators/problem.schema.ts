@@ -116,10 +116,10 @@ const urlSchema = z
   }, "Please enter a valid URL (e.g. https://leetcode.com/problems/...)")
 
 /**
- * Schema for creating a new problem.
- * Disallows id, userId, archivedAt, createdAt, updatedAt from client.
+ * Base schema definition for problem fields.
+ * Disallows id, userId, archivedAt, createdAt, updatedAt, originalSolvedAt from client.
  */
-export const createProblemSchema = z.object({
+export const baseProblemSchema = z.object({
   title: z
     .string()
     .trim()
@@ -137,7 +137,7 @@ export const createProblemSchema = z.object({
   timeSpentSeconds: z.preprocess((val) => {
     if (val === undefined || val === null || val === "") return undefined
     return Number(val)
-  }, z.number().int().min(0, "Time spent cannot be negative").max(86400, "Time spent cannot exceed 24 hours").optional().nullable()),
+  }, z.number().int().min(1, "Time spent must be greater than 0").max(86400, "Time spent cannot exceed 24 hours").optional().nullable()),
   approach: z.string().trim().optional().nullable(),
   timeComplexity: z.string().trim().optional().nullable(),
   spaceComplexity: z.string().trim().optional().nullable(),
@@ -146,24 +146,32 @@ export const createProblemSchema = z.object({
   initialSolveDurationSeconds: z.preprocess((val) => {
     if (val === undefined || val === null || val === "") return undefined
     return Number(val)
-  }, z.number().int().min(0, "Duration cannot be negative").max(86400, "Duration cannot exceed 24 hours").optional().nullable()),
+  }, z.number().int().min(1, "Duration must be greater than 0").max(86400, "Duration cannot exceed 24 hours").optional().nullable()),
   // Support 'time' field in minutes from frontend as convenience
   time: z.preprocess((val) => {
     if (val === undefined || val === null || val === "") return undefined
     return Number(val)
-  }, z.number().min(0).max(1440).optional()),
-  originalSolvedAt: z.preprocess((val) => {
-    if (typeof val === "string" && val.trim()) {
-      const parsed = new Date(val)
-      return isNaN(parsed.getTime()) ? undefined : parsed
-    }
-    return val
-  }, z.date().optional().nullable()),
+  }, z.number().min(0.001, "Duration must be greater than 0").max(1440).optional()),
   solutions: z.array(problemSolutionInputSchema).optional(),
   solution: problemSolutionInputSchema.optional(),
   blockers: z.array(problemBlockerInputSchema).optional(),
   blocker: problemBlockerInputSchema.optional(),
 }).strict()
+
+/**
+ * Schema for creating a new problem.
+ * Requires duration to be provided (either timeSpentSeconds, initialSolveDurationSeconds, or time).
+ */
+export const createProblemSchema = baseProblemSchema.refine((data) => {
+  const hasDuration =
+    (data.timeSpentSeconds !== undefined && data.timeSpentSeconds !== null) ||
+    (data.initialSolveDurationSeconds !== undefined && data.initialSolveDurationSeconds !== null) ||
+    (data.time !== undefined && data.time !== null)
+  return hasDuration
+}, {
+  message: "Time spent is required and must be greater than 0",
+  path: ["timeSpentSeconds"],
+})
 
 export type CreateProblemInput = z.infer<typeof createProblemSchema>
 
@@ -171,7 +179,7 @@ export type CreateProblemInput = z.infer<typeof createProblemSchema>
  * Schema for updating an existing problem.
  * Partial fields, strict rejection of identity/system fields.
  */
-export const updateProblemSchema = createProblemSchema.partial().strict()
+export const updateProblemSchema = baseProblemSchema.partial().strict()
 
 export type UpdateProblemInput = z.infer<typeof updateProblemSchema>
 

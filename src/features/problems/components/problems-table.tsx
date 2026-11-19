@@ -98,13 +98,20 @@ export function ProblemsTable({
               <TableRow key={p.id} className="group hover:bg-muted/40">
                 <TableCell className="py-3.5">
                   <div className="flex flex-col">
-                    <button
-                      type="button"
-                      onClick={() => handleView(p.id)}
-                      className="text-left font-semibold text-foreground hover:text-primary transition-colors line-clamp-1"
-                    >
-                      {p.title}
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleView(p.id)}
+                        className="text-left font-semibold text-foreground hover:text-primary transition-colors line-clamp-1"
+                      >
+                        {p.title}
+                      </button>
+                      {p.solvingStatus === "NOT_SOLVED" && (
+                        <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded shrink-0">
+                          Backlog
+                        </span>
+                      )}
+                    </div>
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                       <a
                         href={formatExternalUrl(p.url)}
@@ -155,22 +162,30 @@ export function ProblemsTable({
                   </span>
                 </TableCell>
                 <TableCell className="py-3.5 text-muted-foreground text-xs font-medium">
-                  {lastRev}
+                  {p.solvingStatus === "NOT_SOLVED" ? (
+                    <span className="text-amber-600 dark:text-amber-400 font-medium">Unsolved Backlog</span>
+                  ) : (
+                    lastRev
+                  )}
                 </TableCell>
                 <TableCell className="py-3.5">
-                  <Badge
-                    tone={
-                      p.status === "Mastered"
-                        ? "success"
-                        : p.status === "Overdue"
-                          ? "danger"
-                          : p.status === "Archived"
-                            ? "neutral"
-                            : "primary"
-                    }
-                  >
-                    {p.status}
-                  </Badge>
+                  {p.solvingStatus === "NOT_SOLVED" ? (
+                    <Badge tone="warning">Unsolved</Badge>
+                  ) : (
+                    <Badge
+                      tone={
+                        p.status === "Mastered"
+                          ? "success"
+                          : p.status === "Overdue"
+                            ? "danger"
+                            : p.status === "Archived"
+                              ? "neutral"
+                              : "primary"
+                      }
+                    >
+                      {p.status}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell className="py-3.5 text-right">
                   <DropdownMenu>
@@ -187,18 +202,20 @@ export function ProblemsTable({
                     <DropdownMenuContent align="end" className="w-44">
                       <DropdownMenuItem onClick={() => handleView(p.id)}>
                         <Eye className="size-4 mr-2" />
-                        View details
+                        {p.solvingStatus === "NOT_SOLVED" ? "View / Solve" : "View details"}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleEdit(p.id)}>
                         <Edit className="size-4 mr-2" />
                         Edit problem
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/revisions/${p.id}`}>
-                          <RotateCcw className="size-4 mr-2" />
-                          Start revision
-                        </Link>
-                      </DropdownMenuItem>
+                      {p.solvingStatus !== "NOT_SOLVED" && (
+                        <DropdownMenuItem asChild>
+                          <Link href={`/revisions/${p.id}`}>
+                            <RotateCcw className="size-4 mr-2" />
+                            Start revision
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       {p.status === "Archived" ? (
                         <DropdownMenuItem

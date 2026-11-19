@@ -5,15 +5,21 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowLeft,
+  BookOpen,
   Check,
+  CheckCircle2,
   Clock,
   Code2,
   FileText,
+  HelpCircle,
+  Layers,
   Lightbulb,
   Plus,
   Sparkles,
   X,
+  Zap,
 } from "lucide-react"
 import {
   Badge,
@@ -30,6 +36,7 @@ import {
   toast,
 } from "@/components/ui"
 import { useProblems } from "@/hooks/use-problems"
+import { cn } from "@/lib/utils"
 import {
   COMMON_TOPICS,
   derivePlatformFromUrl,
@@ -40,7 +47,7 @@ import {
   TIME_COMPLEXITY_OPTIONS,
   SPACE_COMPLEXITY_OPTIONS,
 } from "../schema"
-import type { Difficulty, Platform, Problem } from "@/types/problem"
+import type { Difficulty, Platform, Problem, ProblemSolvingStatus, SolutionType } from "@/types/problem"
 import type { Screen } from "@/types/navigation"
 
 const isKnownTimePreset = (val: string) =>
@@ -65,97 +72,161 @@ export function ProblemForm({
 }: ProblemFormProps) {
   const router = useRouter()
   const { getProblemById, addProblem, updateProblem } = useProblems()
+
   const resolvedProblem =
     propInitialData ||
     (problemId ? getProblemById(problemId) : undefined)
-  const isNotFound =
-    isEdit &&
-    !resolvedProblem
-  const [title, setTitle] = useState(
-    resolvedProblem?.title ||
-      "",
-  )
-  const [url, setUrl] = useState(
-    resolvedProblem?.url ||
-      "",
-  )
+
+  const isNotFound = isEdit && !resolvedProblem
+
+  // Step A: Common fields
+  const [title, setTitle] = useState(resolvedProblem?.title || "")
+  const [url, setUrl] = useState(resolvedProblem?.url || "")
   const [platform, setPlatform] = useState<Platform | string>(
-    resolvedProblem?.platform ||
-      "LeetCode",
+    resolvedProblem?.platform || "LeetCode",
   )
   const [difficulty, setDifficulty] = useState<Difficulty>(
-    resolvedProblem?.difficulty ||
-      "Medium",
+    resolvedProblem?.difficulty || "Medium",
   )
   const [topics, setTopics] = useState<string[]>(
     resolvedProblem?.topics || ["Array"],
   )
   const [customTopicInput, setCustomTopicInput] = useState("")
+
+  // Time spent: required manual duration entry (minutes)
   const [time, setTime] = useState<number | string>(
-    resolvedProblem?.time !==
-      undefined
+    resolvedProblem?.time !== undefined
       ? resolvedProblem.time
-      : 30,
+      : resolvedProblem?.timeSpentMinutes !== undefined && resolvedProblem.timeSpentMinutes !== null
+        ? resolvedProblem.timeSpentMinutes
+        : 30,
+  )
+
+  // Step B: Solving status
+  const [solvingStatus, setSolvingStatus] = useState<ProblemSolvingStatus>(
+    resolvedProblem?.solvingStatus || "SOLVED",
+  )
+
+  // Step C: Solved details
+  const initialLatestSolution =
+    resolvedProblem?.solutions && resolvedProblem.solutions.length > 0
+      ? resolvedProblem.solutions[resolvedProblem.solutions.length - 1]
+      : undefined
+
+  const [solutionType, setSolutionType] = useState<SolutionType>(
+    initialLatestSolution?.solutionType || "BRUTE_FORCE",
   )
   const [approach, setApproach] = useState(
-    resolvedProblem?.approach || "",
+    initialLatestSolution?.approach || resolvedProblem?.approach || "",
   )
-  const initialTime = resolvedProblem?.timeComplexity || ""
+
+  const initialTime =
+    initialLatestSolution?.timeComplexity || resolvedProblem?.timeComplexity || ""
   const initialTimeIsCustom = Boolean(initialTime && !isKnownTimePreset(initialTime))
   const [timeComplexity, setTimeComplexity] = useState(initialTime)
   const [isCustomTime, setIsCustomTime] = useState(initialTimeIsCustom)
   const [customTime, setCustomTime] = useState(initialTimeIsCustom ? initialTime : "")
 
-  const initialSpace = resolvedProblem?.spaceComplexity || ""
+  const initialSpace =
+    initialLatestSolution?.spaceComplexity || resolvedProblem?.spaceComplexity || ""
   const initialSpaceIsCustom = Boolean(initialSpace && !isKnownSpacePreset(initialSpace))
   const [spaceComplexity, setSpaceComplexity] = useState(initialSpace)
   const [isCustomSpace, setIsCustomSpace] = useState(initialSpaceIsCustom)
   const [customSpace, setCustomSpace] = useState(initialSpaceIsCustom ? initialSpace : "")
 
-  const [notes, setNotes] = useState(
-    resolvedProblem?.notes || "",
+  const [improvementNotes, setImprovementNotes] = useState(
+    initialLatestSolution?.improvementNotes || "",
   )
-  const [mistakes, setMistakes] = useState(
-    resolvedProblem?.mistakes || "",
+  const [notes, setNotes] = useState(resolvedProblem?.notes || "")
+  const [mistakes, setMistakes] = useState(resolvedProblem?.mistakes || "")
+
+  // Step D: Unsolved details
+  const initialLatestBlocker =
+    resolvedProblem?.blockers && resolvedProblem.blockers.length > 0
+      ? resolvedProblem.blockers[0]
+      : undefined
+
+  const [stuckPoint, setStuckPoint] = useState(initialLatestBlocker?.stuckPoint || "")
+  const [approachesTried, setApproachesTried] = useState(
+    initialLatestBlocker?.approachesTried || "",
+  )
+  const [conceptsToLearn, setConceptsToLearn] = useState(
+    initialLatestBlocker?.conceptsToLearn || "",
+  )
+  const [failureReason, setFailureReason] = useState(
+    initialLatestBlocker?.failureReason || "",
   )
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Populate data when resolvedProblem changes
   useEffect(() => {
     if (resolvedProblem && isEdit) {
       setTitle(resolvedProblem.title)
       setUrl(resolvedProblem.url)
       setPlatform(resolvedProblem.platform)
       setDifficulty(resolvedProblem.difficulty)
-      setTopics(
-        resolvedProblem.topics || [],
-      )
+      setTopics(resolvedProblem.topics || [])
       setTime(
-        resolvedProblem.time ?? 30,
+        resolvedProblem.time !== undefined
+          ? resolvedProblem.time
+          : resolvedProblem.timeSpentMinutes ?? 30,
       )
-      setApproach(
-        resolvedProblem.approach || "",
-      )
-      const timeVal = resolvedProblem.timeComplexity || ""
-      const timeCustom = Boolean(timeVal && !isKnownTimePreset(timeVal))
-      setTimeComplexity(timeVal)
-      setIsCustomTime(timeCustom)
-      setCustomTime(timeCustom ? timeVal : "")
+      setSolvingStatus(resolvedProblem.solvingStatus || "SOLVED")
 
-      const spaceVal = resolvedProblem.spaceComplexity || ""
-      const spaceCustom = Boolean(spaceVal && !isKnownSpacePreset(spaceVal))
-      setSpaceComplexity(spaceVal)
-      setIsCustomSpace(spaceCustom)
-      setCustomSpace(spaceCustom ? spaceVal : "")
+      const latestSol =
+        resolvedProblem.solutions && resolvedProblem.solutions.length > 0
+          ? resolvedProblem.solutions[resolvedProblem.solutions.length - 1]
+          : undefined
 
-      setNotes(
-        resolvedProblem.notes || "",
-      )
-      setMistakes(
-        resolvedProblem.mistakes || "",
-      )
+      if (latestSol) {
+        setSolutionType(latestSol.solutionType)
+        setApproach(latestSol.approach || "")
+        const tVal = latestSol.timeComplexity || ""
+        const tCustom = Boolean(tVal && !isKnownTimePreset(tVal))
+        setTimeComplexity(tVal)
+        setIsCustomTime(tCustom)
+        setCustomTime(tCustom ? tVal : "")
+
+        const sVal = latestSol.spaceComplexity || ""
+        const sCustom = Boolean(sVal && !isKnownSpacePreset(sVal))
+        setSpaceComplexity(sVal)
+        setIsCustomSpace(sCustom)
+        setCustomSpace(sCustom ? sVal : "")
+        setImprovementNotes(latestSol.improvementNotes || "")
+      } else {
+        setApproach(resolvedProblem.approach || "")
+        const tVal = resolvedProblem.timeComplexity || ""
+        const tCustom = Boolean(tVal && !isKnownTimePreset(tVal))
+        setTimeComplexity(tVal)
+        setIsCustomTime(tCustom)
+        setCustomTime(tCustom ? tVal : "")
+
+        const sVal = resolvedProblem.spaceComplexity || ""
+        const sCustom = Boolean(sVal && !isKnownSpacePreset(sVal))
+        setSpaceComplexity(sVal)
+        setIsCustomSpace(sCustom)
+        setCustomSpace(sCustom ? sVal : "")
+      }
+
+      const latestBlk =
+        resolvedProblem.blockers && resolvedProblem.blockers.length > 0
+          ? resolvedProblem.blockers[0]
+          : undefined
+
+      if (latestBlk) {
+        setStuckPoint(latestBlk.stuckPoint || "")
+        setApproachesTried(latestBlk.approachesTried || "")
+        setConceptsToLearn(latestBlk.conceptsToLearn || "")
+        setFailureReason(latestBlk.failureReason || "")
+      }
+
+      setNotes(resolvedProblem.notes || "")
+      setMistakes(resolvedProblem.mistakes || "")
     }
   }, [resolvedProblem, isEdit])
+
   const handleUrlChange = (newUrl: string) => {
     setUrl(newUrl)
     if (errors.url) {
@@ -166,6 +237,7 @@ export function ProblemForm({
       setPlatform(detected)
     }
   }
+
   const addTopicTag = (tag: string) => {
     const trimmed = tag.trim()
     if (!trimmed) return
@@ -179,13 +251,7 @@ export function ProblemForm({
   }
 
   const removeTopicTag = (tag: string) => {
-    setTopics((prev) =>
-      prev.filter(
-        (t) =>
-          t !==
-          tag,
-      ),
-    )
+    setTopics((prev) => prev.filter((t) => t !== tag))
   }
 
   const handleBack = () => {
@@ -203,20 +269,33 @@ export function ProblemForm({
     setIsSubmitting(true)
     setErrors({})
 
+    const durationNum = Number(time)
+    if (isNaN(durationNum) || durationNum <= 0) {
+      setErrors({ time: "Time spent is required and must be greater than 0 minutes" })
+      toast.error("Time spent must be greater than 0 minutes.")
+      setIsSubmitting(false)
+      return
+    }
+
     const rawValues: ProblemFormValues = {
       title,
       url,
       platform,
       difficulty,
       topics,
-      time:
-        Number(time) ||
-        0,
+      time: durationNum,
+      solvingStatus,
+      solutionType,
       approach,
-      timeComplexity,
-      spaceComplexity,
+      timeComplexity: isCustomTime ? customTime : timeComplexity,
+      spaceComplexity: isCustomSpace ? customSpace : spaceComplexity,
+      improvementNotes,
       notes,
       mistakes,
+      stuckPoint,
+      approachesTried,
+      conceptsToLearn,
+      failureReason,
     }
 
     const validation = problemFormSchema.safeParse(rawValues)
@@ -230,59 +309,136 @@ export function ProblemForm({
         }
       }
       setErrors(fieldErrors)
-      toast.error("Please fill in all required fields correctly.")
+      toast.error(
+        validation.error.issues[0]?.message || "Please fill in all required fields correctly.",
+      )
       setIsSubmitting(false)
       return
     }
 
     const validData = validation.data
+    const timeSpentSeconds = Math.round(validData.time * 60)
 
     try {
-      if (isEdit && resolvedProblem) {
-        await updateProblem(resolvedProblem.id, {
-          title: validData.title,
-          url: validData.url,
-          platform: validData.platform,
-          difficulty: validData.difficulty,
-          topics: validData.topics,
-          time: validData.time,
+      if (validData.solvingStatus === "SOLVED") {
+        const solutionPayload = {
+          solutionType: validData.solutionType || "BRUTE_FORCE",
           approach: validData.approach,
-          timeComplexity: validData.timeComplexity,
-          spaceComplexity: validData.spaceComplexity,
-          notes: validData.notes,
-          mistakes: validData.mistakes,
-        })
+          timeComplexity: validData.timeComplexity || null,
+          spaceComplexity: validData.spaceComplexity || null,
+          improvementNotes: validData.improvementNotes || null,
+        }
 
-        if (setScreen) {
-          setScreen("problems")
+        if (isEdit && resolvedProblem) {
+          await updateProblem(resolvedProblem.id, {
+            title: validData.title,
+            url: validData.url,
+            platform: validData.platform,
+            difficulty: validData.difficulty,
+            topics: validData.topics,
+            timeSpentSeconds,
+            time: validData.time,
+            solvingStatus: "SOLVED",
+            solution: solutionPayload,
+            approach: validData.approach,
+            timeComplexity: validData.timeComplexity,
+            spaceComplexity: validData.spaceComplexity,
+            notes: validData.notes,
+            mistakes: validData.mistakes,
+          })
+
+          toast.success("Problem updated successfully")
+          if (setScreen) {
+            setScreen("problems")
+          } else {
+            router.push(`/problems/${resolvedProblem.id}`)
+          }
         } else {
-          router.push(`/problems/${resolvedProblem.id}`)
+          const created = await addProblem({
+            title: validData.title,
+            url: validData.url,
+            platform: validData.platform,
+            difficulty: validData.difficulty,
+            topics: validData.topics,
+            timeSpentSeconds,
+            time: validData.time,
+            solvingStatus: "SOLVED",
+            solution: solutionPayload,
+            approach: validData.approach,
+            timeComplexity: validData.timeComplexity,
+            spaceComplexity: validData.spaceComplexity,
+            notes: validData.notes,
+            mistakes: validData.mistakes,
+            status: "Learning",
+            nextRevision: "Today",
+            revision: 0,
+            attempts: [],
+          })
+
+          toast.success("Solved problem recorded successfully")
+          if (setScreen) {
+            setScreen("problems")
+          } else if (created && created.id) {
+            router.push(`/problems/${created.id}`)
+          } else {
+            router.push("/problems")
+          }
         }
       } else {
-        const created = await addProblem({
-          title: validData.title,
-          url: validData.url,
-          platform: validData.platform,
-          difficulty: validData.difficulty,
-          topics: validData.topics,
-          time: validData.time,
-          approach: validData.approach,
-          timeComplexity: validData.timeComplexity,
-          spaceComplexity: validData.spaceComplexity,
-          notes: validData.notes,
-          mistakes: validData.mistakes,
-          status: "Learning",
-          nextRevision: "Today",
-          revision: 0,
-          attempts: [],
-        })
+        // NOT_SOLVED problem
+        const blockerPayload = {
+          stuckPoint: validData.stuckPoint || null,
+          approachesTried: validData.approachesTried || null,
+          conceptsToLearn: validData.conceptsToLearn || null,
+          failureReason: validData.failureReason || null,
+        }
 
-        if (setScreen) {
-          setScreen("problems")
-        } else if (created && created.id) {
-          router.push(`/problems/${created.id}`)
+        if (isEdit && resolvedProblem) {
+          await updateProblem(resolvedProblem.id, {
+            title: validData.title,
+            url: validData.url,
+            platform: validData.platform,
+            difficulty: validData.difficulty,
+            topics: validData.topics,
+            timeSpentSeconds,
+            time: validData.time,
+            solvingStatus: "NOT_SOLVED",
+            blocker: blockerPayload,
+            notes: validData.notes,
+            mistakes: validData.mistakes,
+          })
+
+          toast.success("Unsolved problem updated in backlog")
+          if (setScreen) {
+            setScreen("problems")
+          } else {
+            router.push(`/problems/${resolvedProblem.id}`)
+          }
         } else {
-          router.push("/problems")
+          const created = await addProblem({
+            title: validData.title,
+            url: validData.url,
+            platform: validData.platform,
+            difficulty: validData.difficulty,
+            topics: validData.topics,
+            timeSpentSeconds,
+            time: validData.time,
+            solvingStatus: "NOT_SOLVED",
+            blocker: blockerPayload,
+            status: "Learning",
+            nextRevision: "Unsolved",
+            revision: 0,
+            attempts: [],
+          })
+
+          toast.success("Problem saved to Unsolved Backlog")
+          if (setScreen) {
+            setScreen("problems")
+          } else if (created && created.id) {
+            router.push(`/problems/${created.id}`)
+          } else {
+            router.push("/problems")
+          }
         }
       }
     } catch (err) {
@@ -300,8 +456,7 @@ export function ProblemForm({
         </div>
         <h2 className="mt-4 text-xl font-bold">Problem Not Found</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The problem you are trying to edit does not exist or may have been
-          removed.
+          The problem you are trying to edit does not exist or may have been removed.
         </p>
         <div className="mt-6">
           <Button onClick={handleBack}>
@@ -329,12 +484,12 @@ export function ProblemForm({
           </Button>
           <div>
             <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-              {isEdit ? "Edit Problem" : "Add Problem"}
+              {isEdit ? "Edit Problem" : "Record Problem Attempt"}
             </h1>
             <p className="text-xs text-muted-foreground sm:text-sm">
               {isEdit
-                ? `Update details and revision parameters for #${resolvedProblem?.id}`
-                : "Record problem metadata, logic, complexity, and reflection notes."}
+                ? `Update details and learning records for #${resolvedProblem?.id}`
+                : "Record your external platform attempt, whether solved or unsolved."}
             </p>
           </div>
         </div>
@@ -346,7 +501,7 @@ export function ProblemForm({
         </Card>
       )}
 
-      {/* Section 1: Problem Information */}
+      {/* Step A: Basic Details */}
       <Card className="p-5 sm:p-7">
         <div className="mb-6 flex items-center gap-3 border-b pb-4">
           <div className="flex size-10 items-center justify-center rounded-xl bg-secondary text-primary">
@@ -354,10 +509,10 @@ export function ProblemForm({
           </div>
           <div>
             <h2 className="text-base font-bold text-foreground sm:text-lg">
-              Problem Information
+              Basic Details
             </h2>
             <p className="text-xs text-muted-foreground sm:text-sm">
-              Classify the problem source, difficulty, and algorithmic topics.
+              Identify the problem title, URL, platform, topics, and duration spent.
             </p>
           </div>
         </div>
@@ -376,16 +531,10 @@ export function ProblemForm({
                 setTitle(e.target.value)
                 if (errors.title) setErrors((prev) => ({ ...prev, title: "" }))
               }}
-              className={
-                errors.title
-                  ? "border-destructive focus-visible:ring-destructive"
-                  : ""
-              }
+              className={errors.title ? "border-destructive focus-visible:ring-destructive" : ""}
             />
             {errors.title && (
-              <p className="text-xs text-destructive font-medium mt-1">
-                {errors.title}
-              </p>
+              <p className="text-xs text-destructive font-medium mt-1">{errors.title}</p>
             )}
           </div>
 
@@ -399,20 +548,13 @@ export function ProblemForm({
               placeholder="https://leetcode.com/problems/..."
               value={url}
               onChange={(e) => handleUrlChange(e.target.value)}
-              className={
-                errors.url
-                  ? "border-destructive focus-visible:ring-destructive"
-                  : ""
-              }
+              className={errors.url ? "border-destructive focus-visible:ring-destructive" : ""}
             />
             {errors.url ? (
-              <p className="text-xs text-destructive font-medium mt-1">
-                {errors.url}
-              </p>
+              <p className="text-xs text-destructive font-medium mt-1">{errors.url}</p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Platform is automatically detected from popular domains like
-                LeetCode and GFG.
+                Platform is automatically detected from popular domains like LeetCode and GFG.
               </p>
             )}
           </div>
@@ -424,8 +566,7 @@ export function ProblemForm({
               value={platform}
               onValueChange={(val) => {
                 setPlatform(val)
-                if (errors.platform)
-                  setErrors((prev) => ({ ...prev, platform: "" }))
+                if (errors.platform) setErrors((prev) => ({ ...prev, platform: "" }))
               }}
             >
               <SelectTrigger id="platform-select">
@@ -440,9 +581,7 @@ export function ProblemForm({
               </SelectContent>
             </Select>
             {errors.platform && (
-              <p className="text-xs text-destructive font-medium mt-1">
-                {errors.platform}
-              </p>
+              <p className="text-xs text-destructive font-medium mt-1">{errors.platform}</p>
             )}
           </div>
 
@@ -453,8 +592,7 @@ export function ProblemForm({
               value={difficulty}
               onValueChange={(val: Difficulty) => {
                 setDifficulty(val)
-                if (errors.difficulty)
-                  setErrors((prev) => ({ ...prev, difficulty: "" }))
+                if (errors.difficulty) setErrors((prev) => ({ ...prev, difficulty: "" }))
               }}
             >
               <SelectTrigger id="difficulty-select">
@@ -469,8 +607,36 @@ export function ProblemForm({
               </SelectContent>
             </Select>
             {errors.difficulty && (
-              <p className="text-xs text-destructive font-medium mt-1">
-                {errors.difficulty}
+              <p className="text-xs text-destructive font-medium mt-1">{errors.difficulty}</p>
+            )}
+          </div>
+
+          {/* Time Spent Field (Required positive value) */}
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label htmlFor="solving-time">
+              Time Spent Attempting (minutes) <span className="text-destructive">*</span>
+            </Label>
+            <div className="relative">
+              <Input
+                id="solving-time"
+                type="number"
+                min="1"
+                max="1440"
+                placeholder="e.g. 30"
+                value={time}
+                onChange={(e) => {
+                  setTime(e.target.value)
+                  if (errors.time) setErrors((prev) => ({ ...prev, time: "" }))
+                }}
+                className={errors.time ? "border-destructive pl-8" : "pl-8"}
+              />
+              <Clock className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+            </div>
+            {errors.time ? (
+              <p className="text-xs text-destructive font-medium mt-1">{errors.time}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Total time you spent on this problem, whether you solved it or got stuck.
               </p>
             )}
           </div>
@@ -485,16 +651,11 @@ export function ProblemForm({
             <div className="flex flex-wrap items-center gap-1.5 min-h-[38px] p-2 border rounded-md bg-background">
               {topics.length === 0 ? (
                 <span className="text-xs text-muted-foreground">
-                  No topics selected yet. Pick from recommendations below or add
-                  custom.
+                  No topics selected yet. Pick from recommendations below or add custom.
                 </span>
               ) : (
                 topics.map((t) => (
-                  <Badge
-                    key={t}
-                    tone="primary"
-                    className="gap-1 pl-2.5 pr-1.5 py-1 text-xs"
-                  >
+                  <Badge key={t} tone="primary" className="gap-1 pl-2.5 pr-1.5 py-1 text-xs">
                     <span>{t}</span>
                     <button
                       type="button"
@@ -556,194 +717,371 @@ export function ProblemForm({
             </div>
 
             {errors.topics && (
-              <p className="text-xs text-destructive font-medium mt-1">
-                {errors.topics}
-              </p>
+              <p className="text-xs text-destructive font-medium mt-1">{errors.topics}</p>
             )}
           </div>
         </div>
       </Card>
 
-      {/* Section 2: Complexity & Solution Reflection */}
+      {/* Step B: Solving Status Selector */}
       <Card className="p-5 sm:p-7">
-        <div className="mb-6 flex items-center gap-3 border-b pb-4">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-secondary text-primary">
-            <Lightbulb className="size-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-foreground sm:text-lg">
-              Solution Reflection & Complexity
-            </h2>
-            <p className="text-xs text-muted-foreground sm:text-sm">
-              Document algorithmic intuition, big-O metrics, and personal
-              learnings.
-            </p>
-          </div>
+        <div className="mb-4">
+          <Label className="text-base font-bold text-foreground">
+            Did you solve this problem? <span className="text-destructive">*</span>
+          </Label>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Tell us whether you completed a working solution or need to review it in your Unsolved Backlog.
+          </p>
         </div>
 
-        <div className="space-y-5">
-          {/* Approach Textarea */}
-          <div className="space-y-1.5">
-            <Label htmlFor="approach-input">Approach / Solution Logic</Label>
-            <Textarea
-              id="approach-input"
-              rows={4}
-              placeholder="Explain the intuition, pointer movements, edge conditions, or recurrence relations..."
-              value={approach}
-              onChange={(e) => setApproach(e.target.value)}
-            />
-          </div>
-
-          {/* Complexities and Solving Duration */}
-          <div className="grid gap-5 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="time-complexity">Time Complexity</Label>
-              <Select
-                value={
-                  isCustomTime
-                    ? "Other"
-                    : timeComplexity || "none"
-                }
-                onValueChange={(val) => {
-                  if (val === "Other") {
-                    setIsCustomTime(true)
-                    setTimeComplexity(customTime)
-                  } else if (val === "none") {
-                    setIsCustomTime(false)
-                    setTimeComplexity("")
-                  } else {
-                    setIsCustomTime(false)
-                    setTimeComplexity(val)
-                  }
-                }}
-              >
-                <SelectTrigger id="time-complexity">
-                  <SelectValue placeholder="Select Time Complexity" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">
-                    <span className="text-muted-foreground">Not specified</span>
-                  </SelectItem>
-                  {TIME_COMPLEXITY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {isCustomTime && (
-                <Input
-                  className="mt-2 font-mono text-xs"
-                  placeholder="e.g. O(min(n, m)) or O(k)"
-                  value={customTime}
-                  onChange={(e) => {
-                    setCustomTime(e.target.value)
-                    setTimeComplexity(e.target.value)
-                  }}
-                  autoFocus
-                />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setSolvingStatus("SOLVED")}
+            className={cn(
+              "flex items-start gap-3 rounded-xl border p-4 text-left transition-all",
+              solvingStatus === "SOLVED"
+                ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                : "border-border hover:bg-muted/50",
+            )}
+          >
+            <div
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                solvingStatus === "SOLVED"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground",
               )}
+            >
+              <CheckCircle2 className="size-5" />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="space-complexity">Space Complexity</Label>
-              <Select
-                value={
-                  isCustomSpace
-                    ? "Other"
-                    : spaceComplexity || "none"
-                }
-                onValueChange={(val) => {
-                  if (val === "Other") {
-                    setIsCustomSpace(true)
-                    setSpaceComplexity(customSpace)
-                  } else if (val === "none") {
-                    setIsCustomSpace(false)
-                    setSpaceComplexity("")
-                  } else {
-                    setIsCustomSpace(false)
-                    setSpaceComplexity(val)
-                  }
-                }}
-              >
-                <SelectTrigger id="space-complexity">
-                  <SelectValue placeholder="Select Space Complexity" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">
-                    <span className="text-muted-foreground">Not specified</span>
-                  </SelectItem>
-                  {SPACE_COMPLEXITY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {isCustomSpace && (
-                <Input
-                  className="mt-2 font-mono text-xs"
-                  placeholder="e.g. O(k) or O(V + E)"
-                  value={customSpace}
-                  onChange={(e) => {
-                    setCustomSpace(e.target.value)
-                    setSpaceComplexity(e.target.value)
-                  }}
-                  autoFocus
-                />
-              )}
+            <div>
+              <div className="font-semibold text-foreground text-sm">Solved</div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                I successfully completed a working solution. (Brute Force or Optimized).
+              </p>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="solving-time">Initial Solving Time (mins)</Label>
-              <div className="relative">
-                <Input
-                  id="solving-time"
-                  type="number"
-                  min="0"
-                  max="1440"
-                  placeholder="30"
-                  value={time}
-                  onChange={(e) => {
-                    setTime(e.target.value)
-                    if (errors.time)
-                      setErrors((prev) => ({ ...prev, time: "" }))
-                  }}
-                  className={errors.time ? "border-destructive pl-8" : "pl-8"}
-                />
-                <Clock className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              </div>
-              {errors.time && (
-                <p className="text-xs text-destructive font-medium mt-1">
-                  {errors.time}
-                </p>
-              )}
-            </div>
-          </div>
+          </button>
 
-          {/* Personal Notes */}
-          <div className="space-y-1.5">
-            <Label htmlFor="personal-notes">Personal Notes & Insights</Label>
-            <Textarea
-              id="personal-notes"
-              rows={3}
-              placeholder="Key observations, alternative patterns, edge cases to keep in mind..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-
-          {/* Mistakes Made */}
-          <div className="space-y-1.5">
-            <Label htmlFor="mistakes-made">Mistakes Made / Pitfalls</Label>
-            <Textarea
-              id="mistakes-made"
-              rows={3}
-              placeholder="What went wrong on the first attempt? (e.g. Integer overflow, off-by-one, forgot base case)..."
-              value={mistakes}
-              onChange={(e) => setMistakes(e.target.value)}
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => setSolvingStatus("NOT_SOLVED")}
+            className={cn(
+              "flex items-start gap-3 rounded-xl border p-4 text-left transition-all",
+              solvingStatus === "NOT_SOLVED"
+                ? "border-amber-500 bg-amber-500/5 ring-2 ring-amber-500/20"
+                : "border-border hover:bg-muted/50",
+            )}
+          >
+            <div
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                solvingStatus === "NOT_SOLVED"
+                  ? "bg-amber-500 text-white"
+                  : "bg-muted text-muted-foreground",
+              )}
+            >
+              <HelpCircle className="size-5" />
+            </div>
+            <div>
+              <div className="font-semibold text-foreground text-sm">Not Solved</div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                I got stuck or couldn't finish. Save to Unsolved Backlog without revision scheduling.
+              </p>
+            </div>
+          </button>
         </div>
       </Card>
+
+      {/* Step C: If Solved -> Solution Details */}
+      {solvingStatus === "SOLVED" && (
+        <Card className="p-5 sm:p-7">
+          <div className="mb-6 flex items-center gap-3 border-b pb-4">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-secondary text-primary">
+              <Lightbulb className="size-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-foreground sm:text-lg">
+                Solution Details & Complexity
+              </h2>
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                Document how you solved it, your algorithmic approach, and Big-O complexities.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            {/* Solution Type: Brute Force vs Optimized */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">How did you solve it?</Label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setSolutionType("BRUTE_FORCE")}
+                  className={cn(
+                    "flex items-start gap-3 rounded-xl border p-3 text-left transition-all",
+                    solutionType === "BRUTE_FORCE"
+                      ? "border-amber-500 bg-amber-500/10 ring-1 ring-amber-500"
+                      : "border-border hover:bg-muted/40",
+                  )}
+                >
+                  <Layers className="size-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-sm">Brute Force</div>
+                    <p className="text-xs text-muted-foreground">
+                      Initial working approach. You can add an optimized solution later.
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSolutionType("OPTIMIZED")}
+                  className={cn(
+                    "flex items-start gap-3 rounded-xl border p-3 text-left transition-all",
+                    solutionType === "OPTIMIZED"
+                      ? "border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500"
+                      : "border-border hover:bg-muted/40",
+                  )}
+                >
+                  <Zap className="size-5 text-emerald-500 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-sm">Optimized</div>
+                    <p className="text-xs text-muted-foreground">
+                      Optimal time and space complexity solution.
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Approach Textarea (Required) */}
+            <div className="space-y-1.5">
+              <Label htmlFor="approach-input">
+                Approach Explanation <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="approach-input"
+                rows={4}
+                placeholder="Explain the intuition, pointer movements, edge conditions, data structure chosen, or recurrence relation..."
+                value={approach}
+                onChange={(e) => {
+                  setApproach(e.target.value)
+                  if (errors.approach) setErrors((prev) => ({ ...prev, approach: "" }))
+                }}
+                className={errors.approach ? "border-destructive focus-visible:ring-destructive" : ""}
+              />
+              {errors.approach && (
+                <p className="text-xs text-destructive font-medium mt-1">{errors.approach}</p>
+              )}
+            </div>
+
+            {/* Complexities */}
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="time-complexity">Time Complexity</Label>
+                <Select
+                  value={isCustomTime ? "Other" : timeComplexity || "none"}
+                  onValueChange={(val) => {
+                    if (val === "Other") {
+                      setIsCustomTime(true)
+                      setTimeComplexity(customTime)
+                    } else if (val === "none") {
+                      setIsCustomTime(false)
+                      setTimeComplexity("")
+                    } else {
+                      setIsCustomTime(false)
+                      setTimeComplexity(val)
+                    }
+                  }}
+                >
+                  <SelectTrigger id="time-complexity">
+                    <SelectValue placeholder="Select Time Complexity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-muted-foreground">Not specified</span>
+                    </SelectItem>
+                    {TIME_COMPLEXITY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isCustomTime && (
+                  <Input
+                    className="mt-2 font-mono text-xs"
+                    placeholder="e.g. O(min(n, m)) or O(k)"
+                    value={customTime}
+                    onChange={(e) => {
+                      setCustomTime(e.target.value)
+                      setTimeComplexity(e.target.value)
+                    }}
+                    autoFocus
+                  />
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="space-complexity">Space Complexity</Label>
+                <Select
+                  value={isCustomSpace ? "Other" : spaceComplexity || "none"}
+                  onValueChange={(val) => {
+                    if (val === "Other") {
+                      setIsCustomSpace(true)
+                      setSpaceComplexity(customSpace)
+                    } else if (val === "none") {
+                      setIsCustomSpace(false)
+                      setSpaceComplexity("")
+                    } else {
+                      setIsCustomSpace(false)
+                      setSpaceComplexity(val)
+                    }
+                  }}
+                >
+                  <SelectTrigger id="space-complexity">
+                    <SelectValue placeholder="Select Space Complexity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-muted-foreground">Not specified</span>
+                    </SelectItem>
+                    {SPACE_COMPLEXITY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isCustomSpace && (
+                  <Input
+                    className="mt-2 font-mono text-xs"
+                    placeholder="e.g. O(k) or O(V + E)"
+                    value={customSpace}
+                    onChange={(e) => {
+                      setCustomSpace(e.target.value)
+                      setSpaceComplexity(e.target.value)
+                    }}
+                    autoFocus
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Improvement Notes (Optional) */}
+            <div className="space-y-1.5">
+              <Label htmlFor="improvement-notes">
+                Improvement Notes <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+              </Label>
+              <Textarea
+                id="improvement-notes"
+                rows={3}
+                placeholder="What bottlenecks remain? What can be optimized further? (Optional, especially helpful for brute force)..."
+                value={improvementNotes}
+                onChange={(e) => setImprovementNotes(e.target.value)}
+              />
+            </div>
+
+            {/* Personal Notes */}
+            <div className="space-y-1.5">
+              <Label htmlFor="personal-notes">
+                Personal Notes & Insights <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+              </Label>
+              <Textarea
+                id="personal-notes"
+                rows={3}
+                placeholder="Key observations, alternative patterns, edge cases to keep in mind..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+
+            {/* Mistakes Made */}
+            <div className="space-y-1.5">
+              <Label htmlFor="mistakes-made">
+                Mistakes Made / Pitfalls <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+              </Label>
+              <Textarea
+                id="mistakes-made"
+                rows={3}
+                placeholder="What went wrong on the first attempt? (e.g. Integer overflow, off-by-one, forgot base case)..."
+                value={mistakes}
+                onChange={(e) => setMistakes(e.target.value)}
+              />
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Step D: If Not Solved -> Unsolved Learning & Reflection Section */}
+      {solvingStatus === "NOT_SOLVED" && (
+        <Card className="border-amber-500/30 bg-amber-500/[0.02] p-5 sm:p-7">
+          <div className="mb-6 flex items-center gap-3 border-b border-amber-500/20 pb-4">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <BookOpen className="size-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-foreground sm:text-lg">
+                Unsolved Learning & Reflection
+              </h2>
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                Document what blocked you. This problem will be added to your Unsolved Backlog without scheduled revisions.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            {/* Where did you get stuck? */}
+            <div className="space-y-1.5">
+              <Label htmlFor="stuck-point">Where did you get stuck?</Label>
+              <Textarea
+                id="stuck-point"
+                rows={3}
+                placeholder="e.g. Could not formulate the dynamic programming state transition; struggled to handle disjoint set cycle detection..."
+                value={stuckPoint}
+                onChange={(e) => setStuckPoint(e.target.value)}
+              />
+            </div>
+
+            {/* What approaches did you try? */}
+            <div className="space-y-1.5">
+              <Label htmlFor="approaches-tried">What approaches did you try?</Label>
+              <Textarea
+                id="approaches-tried"
+                rows={3}
+                placeholder="e.g. Tried a greedy approach sorting by end time; tried standard BFS but hit memory limits on large graphs..."
+                value={approachesTried}
+                onChange={(e) => setApproachesTried(e.target.value)}
+              />
+            </div>
+
+            {/* What concepts or patterns do you need to learn? */}
+            <div className="space-y-1.5">
+              <Label htmlFor="concepts-to-learn">What concepts or patterns do you need to learn?</Label>
+              <Textarea
+                id="concepts-to-learn"
+                rows={3}
+                placeholder="e.g. Monotonic deque for sliding window minimum; Dijkstra with priority queue; binary lifting..."
+                value={conceptsToLearn}
+                onChange={(e) => setConceptsToLearn(e.target.value)}
+              />
+            </div>
+
+            {/* Why couldn't you solve it? */}
+            <div className="space-y-1.5">
+              <Label htmlFor="failure-reason">Why couldn't you solve it?</Label>
+              <Textarea
+                id="failure-reason"
+                rows={3}
+                placeholder="e.g. Ran out of time during attempt; missed an edge case with negative weights; didn't recognize problem reduction..."
+                value={failureReason}
+                onChange={(e) => setFailureReason(e.target.value)}
+              />
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Form Actions */}
       <div className="flex items-center justify-end gap-3 pt-2">
@@ -757,7 +1095,11 @@ export function ProblemForm({
         </Button>
         <Button type="submit" disabled={isSubmitting} loading={isSubmitting}>
           {!isSubmitting && <Check className="size-4 mr-1.5" />}
-          {isEdit ? "Update Problem" : "Save Problem"}
+          {isEdit
+            ? "Update Problem"
+            : solvingStatus === "SOLVED"
+              ? "Save Solved Problem"
+              : "Save to Unsolved Backlog"}
         </Button>
       </div>
     </form>

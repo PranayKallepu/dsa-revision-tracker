@@ -24,6 +24,7 @@ import {
 } from "@/components/ui"
 import { ProblemsTable } from "./problems-table"
 import { useProblems } from "@/hooks/use-problems"
+import { cn } from "@/lib/utils"
 import { PLATFORMS } from "../schema"
 import type { Problem } from "@/types/problem"
 import type { Screen } from "@/types/navigation"
@@ -68,25 +69,25 @@ export function ProblemsView({
 
   const counts = useMemo(() => {
     const total = items.length
-    const active = items.filter((p) => p.status !== "Archived").length
-    const learning = items.filter((p) => p.status === "Learning").length
-    const mastered = items.filter((p) => p.status === "Mastered").length
-    const overdue = items.filter((p) => p.status === "Overdue").length
+    const unsolved = items.filter((p) => p.solvingStatus === "NOT_SOLVED").length
+    const active = items.filter((p) => p.status !== "Archived" && p.solvingStatus !== "NOT_SOLVED").length
+    const learning = items.filter((p) => p.status === "Learning" && p.solvingStatus !== "NOT_SOLVED").length
+    const mastered = items.filter((p) => p.status === "Mastered" && p.solvingStatus !== "NOT_SOLVED").length
+    const overdue = items.filter((p) => p.status === "Overdue" && p.solvingStatus !== "NOT_SOLVED").length
     const archived = items.filter((p) => p.status === "Archived").length
-    return { total, active, learning, mastered, overdue, archived }
+    return { total, unsolved, active, learning, mastered, overdue, archived }
   }, [items])
 
   const filtered = useMemo(() => {
     return items.filter((p) => {
-      if (statusFilter === "active" && p.status === "Archived") return false
-      if (statusFilter === "Archived" && p.status !== "Archived") return false
-      if (
-        statusFilter !== "all" &&
-        statusFilter !== "active" &&
-        statusFilter !== "Archived" &&
-        p.status !== statusFilter
-      ) {
-        return false
+      if (statusFilter === "unsolved") {
+        if (p.solvingStatus !== "NOT_SOLVED") return false
+      } else if (statusFilter === "active") {
+        if (p.status === "Archived" || p.solvingStatus === "NOT_SOLVED") return false
+      } else if (statusFilter === "Archived") {
+        if (p.status !== "Archived") return false
+      } else if (statusFilter !== "all") {
+        if (p.status !== statusFilter || p.solvingStatus === "NOT_SOLVED") return false
       }
       if (query.trim()) {
         const q = query.toLowerCase()
@@ -191,6 +192,22 @@ export function ProblemsView({
           }}
         >
           Active ({counts.active})
+        </Button>
+        <Button
+          variant={statusFilter === "unsolved" ? "default" : "outline"}
+          size="sm"
+          className={cn(
+            "rounded-full text-xs",
+            statusFilter === "unsolved"
+              ? "bg-amber-600 hover:bg-amber-700 text-white"
+              : "border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10",
+          )}
+          onClick={() => {
+            setStatusFilter("unsolved")
+            setCurrentPage(1)
+          }}
+        >
+          Unsolved Backlog ({counts.unsolved})
         </Button>
         <Button
           variant={statusFilter === "Learning" ? "default" : "outline"}
