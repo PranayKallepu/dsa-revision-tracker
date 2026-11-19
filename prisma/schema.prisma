@@ -40,6 +40,16 @@ enum ProblemStatus {
   ARCHIVED
 }
 
+enum ProblemSolvingStatus {
+  SOLVED
+  NOT_SOLVED
+}
+
+enum SolutionType {
+  BRUTE_FORCE
+  OPTIMIZED
+}
+
 enum RevisionRating {
   FORGOT
   DIFFICULT
@@ -143,27 +153,34 @@ model VerificationToken {
 // ------------------------------------------------------------------------------
 
 model Problem {
-  id                          String        @id @default(cuid())
-  userId                      String        @map("user_id")
+  id                          String               @id @default(cuid())
+  userId                      String               @map("user_id")
   title                       String
   url                         String
   platform                    Platform
   difficulty                  Difficulty
-  status                      ProblemStatus @default(LEARNING)
-  approach                    String?       @db.Text
-  timeComplexity              String?       @map("time_complexity")
-  spaceComplexity             String?       @map("space_complexity")
-  notes                       String?       @db.Text
-  mistakes                    String?       @db.Text
-  initialSolveDurationSeconds Int?          @map("initial_solve_duration_seconds")
-  originalSolvedAt            DateTime      @default(now()) @map("original_solved_at")
-  archivedAt                  DateTime?     @map("archived_at")
-  createdAt                   DateTime      @default(now()) @map("created_at")
-  updatedAt                   DateTime      @updatedAt @map("updated_at")
+  solvingStatus               ProblemSolvingStatus @default(SOLVED) @map("solving_status")
+  status                      ProblemStatus        @default(LEARNING)
+  isMastered                  Boolean              @default(false) @map("is_mastered")
+  masteredAt                  DateTime?            @map("mastered_at")
+  currentCycle                Int                  @default(1) @map("current_cycle")
+  timeSpentSeconds            Int?                 @map("time_spent_seconds")
+  approach                    String?              @db.Text
+  timeComplexity              String?              @map("time_complexity")
+  spaceComplexity             String?              @map("space_complexity")
+  notes                       String?              @db.Text
+  mistakes                    String?              @db.Text
+  initialSolveDurationSeconds Int?                 @map("initial_solve_duration_seconds")
+  originalSolvedAt            DateTime?            @default(now()) @map("original_solved_at")
+  archivedAt                  DateTime?            @map("archived_at")
+  createdAt                   DateTime             @default(now()) @map("created_at")
+  updatedAt                   DateTime             @updatedAt @map("updated_at")
 
   // Relationships
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   topics      ProblemTopic[]
+  solutions   ProblemSolution[]
+  blockers    ProblemBlocker[]
   revisions   Revision[]
   attempts    Attempt[]
   assessments Assessment[]
@@ -171,9 +188,49 @@ model Problem {
   @@index([userId])
   @@index([difficulty])
   @@index([platform])
+  @@index([solvingStatus])
+  @@index([isMastered])
   @@index([archivedAt])
   @@index([userId, archivedAt])
+  @@index([userId, solvingStatus])
+  @@index([userId, isMastered])
   @@map("problems")
+}
+
+model ProblemSolution {
+  id               String       @id @default(cuid())
+  problemId        String       @map("problem_id")
+  solutionType     SolutionType @map("solution_type")
+  approach         String       @db.Text
+  timeComplexity   String?      @map("time_complexity")
+  spaceComplexity  String?      @map("space_complexity")
+  improvementNotes String?      @map("improvement_notes") @db.Text
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  // Relationships
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
+  @@index([problemId, solutionType])
+  @@map("problem_solutions")
+}
+
+model ProblemBlocker {
+  id              String   @id @default(cuid())
+  problemId       String   @map("problem_id")
+  stuckPoint      String?  @map("stuck_point") @db.Text
+  approachesTried String?  @map("approaches_tried") @db.Text
+  conceptsToLearn String?  @map("concepts_to_learn") @db.Text
+  failureReason   String?  @map("failure_reason") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
+  @@map("problem_blockers")
 }
 
 model Topic {
@@ -237,6 +294,7 @@ model Attempt {
   id              String    @id @default(cuid())
   problemId       String    @map("problem_id")
   revisionId      String?   @map("revision_id")
+  cycleNumber     Int?      @map("cycle_number")
   durationSeconds Int       @map("duration_seconds")
   createdAt       DateTime  @default(now()) @map("created_at")
 
@@ -247,6 +305,7 @@ model Attempt {
   @@index([problemId])
   @@index([revisionId])
   @@index([problemId, createdAt])
+  @@index([problemId, cycleNumber])
   @@map("attempts")
 }
 

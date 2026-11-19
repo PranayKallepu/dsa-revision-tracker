@@ -1,5 +1,5 @@
 import "server-only"
-import { Difficulty, Platform, Prisma, ProblemStatus } from "@prisma/client"
+import { Difficulty, Platform, Prisma, ProblemSolvingStatus, ProblemStatus, SolutionType } from "@prisma/client"
 import { BaseRepository } from "./base.repository"
 import type { ListProblemsQuery } from "../validators/problem.schema"
 import type { PaginationMeta } from "@/types/api"
@@ -11,6 +11,8 @@ export interface ProblemWithRelations extends Prisma.ProblemGetPayload<{
         topic: true
       }
     }
+    solutions: true
+    blockers: true
     revisions: true
     attempts: true
     assessments: true
@@ -24,6 +26,8 @@ export interface ProblemSummaryWithRelations extends Prisma.ProblemGetPayload<{
         topic: true
       }
     }
+    solutions: true
+    blockers: true
     revisions: true
     attempts: true
   }
@@ -35,7 +39,7 @@ export class ProblemRepository extends BaseRepository {
    */
   async findMany(
     userId: string,
-    query: ListProblemsQuery,
+    query: Partial<ListProblemsQuery> = {},
   ): Promise<{ items: ProblemSummaryWithRelations[]; meta: PaginationMeta }> {
     const {
       page = 1,
@@ -45,6 +49,8 @@ export class ProblemRepository extends BaseRepository {
       platform,
       topic,
       status,
+      solvingStatus,
+      isMastered,
       archived,
       sortBy = "createdAt",
       sortOrder = "desc",
@@ -58,6 +64,16 @@ export class ProblemRepository extends BaseRepository {
     // Status filter
     if (status) {
       where.status = status
+    }
+
+    // Solving status filter (SOLVED / NOT_SOLVED)
+    if (solvingStatus) {
+      where.solvingStatus = solvingStatus
+    }
+
+    // Mastery filter
+    if (isMastered !== undefined) {
+      where.isMastered = isMastered
     }
 
     // Archived filter
@@ -141,6 +157,12 @@ export class ProblemRepository extends BaseRepository {
               topic: true,
             },
           },
+          solutions: {
+            orderBy: { createdAt: "asc" },
+          },
+          blockers: {
+            orderBy: { createdAt: "desc" },
+          },
           revisions: {
             orderBy: { scheduledAt: "desc" },
           },
@@ -175,6 +197,12 @@ export class ProblemRepository extends BaseRepository {
             topic: true,
           },
         },
+        solutions: {
+          orderBy: { createdAt: "asc" },
+        },
+        blockers: {
+          orderBy: { createdAt: "desc" },
+        },
         revisions: {
           orderBy: { scheduledAt: "desc" },
         },
@@ -198,14 +226,32 @@ export class ProblemRepository extends BaseRepository {
       url: string
       platform: Platform
       difficulty: Difficulty
+      solvingStatus?: ProblemSolvingStatus
       status?: ProblemStatus
+      isMastered?: boolean
+      masteredAt?: Date | null
+      currentCycle?: number
+      timeSpentSeconds?: number | null
       approach?: string | null
       timeComplexity?: string | null
       spaceComplexity?: string | null
       notes?: string | null
       mistakes?: string | null
       initialSolveDurationSeconds?: number | null
-      originalSolvedAt?: Date
+      originalSolvedAt?: Date | null
+      solutions?: Array<{
+        solutionType: SolutionType
+        approach: string
+        timeComplexity?: string | null
+        spaceComplexity?: string | null
+        improvementNotes?: string | null
+      }>
+      blockers?: Array<{
+        stuckPoint?: string | null
+        approachesTried?: string | null
+        conceptsToLearn?: string | null
+        failureReason?: string | null
+      }>
     },
     topicIds: string[],
   ): Promise<ProblemWithRelations> {
@@ -217,14 +263,19 @@ export class ProblemRepository extends BaseRepository {
           url: data.url,
           platform: data.platform,
           difficulty: data.difficulty,
+          solvingStatus: data.solvingStatus || ProblemSolvingStatus.SOLVED,
           status: data.status || ProblemStatus.LEARNING,
+          isMastered: data.isMastered || false,
+          masteredAt: data.masteredAt,
+          currentCycle: data.currentCycle || 1,
+          timeSpentSeconds: data.timeSpentSeconds,
           approach: data.approach,
           timeComplexity: data.timeComplexity,
           spaceComplexity: data.spaceComplexity,
           notes: data.notes,
           mistakes: data.mistakes,
           initialSolveDurationSeconds: data.initialSolveDurationSeconds,
-          originalSolvedAt: data.originalSolvedAt || new Date(),
+          originalSolvedAt: data.originalSolvedAt !== undefined ? data.originalSolvedAt : (data.solvingStatus === ProblemSolvingStatus.NOT_SOLVED ? null : new Date()),
           topics: {
             create: topicIds.map((topicId) => ({
               topic: {
@@ -232,12 +283,39 @@ export class ProblemRepository extends BaseRepository {
               },
             })),
           },
+          ...(data.solutions && data.solutions.length > 0 && {
+            solutions: {
+              create: data.solutions.map((sol) => ({
+                solutionType: sol.solutionType,
+                approach: sol.approach,
+                timeComplexity: sol.timeComplexity,
+                spaceComplexity: sol.spaceComplexity,
+                improvementNotes: sol.improvementNotes,
+              })),
+            },
+          }),
+          ...(data.blockers && data.blockers.length > 0 && {
+            blockers: {
+              create: data.blockers.map((blk) => ({
+                stuckPoint: blk.stuckPoint,
+                approachesTried: blk.approachesTried,
+                conceptsToLearn: blk.conceptsToLearn,
+                failureReason: blk.failureReason,
+              })),
+            },
+          }),
         },
         include: {
           topics: {
             include: {
               topic: true,
             },
+          },
+          solutions: {
+            orderBy: { createdAt: "asc" },
+          },
+          blockers: {
+            orderBy: { createdAt: "desc" },
           },
           revisions: true,
           attempts: true,
@@ -260,14 +338,32 @@ export class ProblemRepository extends BaseRepository {
       url?: string
       platform?: Platform
       difficulty?: Difficulty
+      solvingStatus?: ProblemSolvingStatus
       status?: ProblemStatus
+      isMastered?: boolean
+      masteredAt?: Date | null
+      currentCycle?: number
+      timeSpentSeconds?: number | null
       approach?: string | null
       timeComplexity?: string | null
       spaceComplexity?: string | null
       notes?: string | null
       mistakes?: string | null
       initialSolveDurationSeconds?: number | null
-      originalSolvedAt?: Date
+      originalSolvedAt?: Date | null
+      solutions?: Array<{
+        solutionType: SolutionType
+        approach: string
+        timeComplexity?: string | null
+        spaceComplexity?: string | null
+        improvementNotes?: string | null
+      }>
+      blockers?: Array<{
+        stuckPoint?: string | null
+        approachesTried?: string | null
+        conceptsToLearn?: string | null
+        failureReason?: string | null
+      }>
     },
     topicIds?: string[],
   ): Promise<ProblemWithRelations | null> {
@@ -298,6 +394,33 @@ export class ProblemRepository extends BaseRepository {
         }
       }
 
+      // If new solutions were provided, create them
+      if (data.solutions && data.solutions.length > 0) {
+        await tx.problemSolution.createMany({
+          data: data.solutions.map((sol) => ({
+            problemId: id,
+            solutionType: sol.solutionType,
+            approach: sol.approach,
+            timeComplexity: sol.timeComplexity,
+            spaceComplexity: sol.spaceComplexity,
+            improvementNotes: sol.improvementNotes,
+          })),
+        })
+      }
+
+      // If new blockers were provided, create them
+      if (data.blockers && data.blockers.length > 0) {
+        await tx.problemBlocker.createMany({
+          data: data.blockers.map((blk) => ({
+            problemId: id,
+            stuckPoint: blk.stuckPoint,
+            approachesTried: blk.approachesTried,
+            conceptsToLearn: blk.conceptsToLearn,
+            failureReason: blk.failureReason,
+          })),
+        })
+      }
+
       const updated = await tx.problem.update({
         where: { id },
         data: {
@@ -305,7 +428,12 @@ export class ProblemRepository extends BaseRepository {
           ...(data.url !== undefined && { url: data.url }),
           ...(data.platform !== undefined && { platform: data.platform }),
           ...(data.difficulty !== undefined && { difficulty: data.difficulty }),
+          ...(data.solvingStatus !== undefined && { solvingStatus: data.solvingStatus }),
           ...(data.status !== undefined && { status: data.status }),
+          ...(data.isMastered !== undefined && { isMastered: data.isMastered }),
+          ...(data.masteredAt !== undefined && { masteredAt: data.masteredAt }),
+          ...(data.currentCycle !== undefined && { currentCycle: data.currentCycle }),
+          ...(data.timeSpentSeconds !== undefined && { timeSpentSeconds: data.timeSpentSeconds }),
           ...(data.approach !== undefined && { approach: data.approach }),
           ...(data.timeComplexity !== undefined && { timeComplexity: data.timeComplexity }),
           ...(data.spaceComplexity !== undefined && { spaceComplexity: data.spaceComplexity }),
@@ -321,6 +449,12 @@ export class ProblemRepository extends BaseRepository {
             include: {
               topic: true,
             },
+          },
+          solutions: {
+            orderBy: { createdAt: "asc" },
+          },
+          blockers: {
+            orderBy: { createdAt: "desc" },
           },
           revisions: {
             orderBy: { scheduledAt: "desc" },
@@ -363,6 +497,12 @@ export class ProblemRepository extends BaseRepository {
             topic: true,
           },
         },
+        solutions: {
+          orderBy: { createdAt: "asc" },
+        },
+        blockers: {
+          orderBy: { createdAt: "desc" },
+        },
         revisions: true,
         attempts: true,
         assessments: true,
@@ -394,6 +534,159 @@ export class ProblemRepository extends BaseRepository {
           include: {
             topic: true,
           },
+        },
+        solutions: {
+          orderBy: { createdAt: "asc" },
+        },
+        blockers: {
+          orderBy: { createdAt: "desc" },
+        },
+        revisions: true,
+        attempts: true,
+        assessments: true,
+      },
+    })
+  }
+
+  /**
+   * Adds an independent solution (BRUTE_FORCE or OPTIMIZED) to a user-owned problem.
+   * Adding an optimized solution does not overwrite or delete existing brute-force solutions.
+   */
+  async addSolution(
+    problemId: string,
+    userId: string,
+    data: {
+      solutionType: SolutionType
+      approach: string
+      timeComplexity?: string | null
+      spaceComplexity?: string | null
+      improvementNotes?: string | null
+    },
+  ) {
+    const existing = await this.db.problem.findFirst({
+      where: { id: problemId, userId },
+      select: { id: true },
+    })
+
+    if (!existing) {
+      return null
+    }
+
+    return this.db.problemSolution.create({
+      data: {
+        problemId,
+        solutionType: data.solutionType,
+        approach: data.approach,
+        timeComplexity: data.timeComplexity,
+        spaceComplexity: data.spaceComplexity,
+        improvementNotes: data.improvementNotes,
+      },
+    })
+  }
+
+  /**
+   * Adds learning/blocker information to an unsolved user-owned problem.
+   */
+  async addBlocker(
+    problemId: string,
+    userId: string,
+    data: {
+      stuckPoint?: string | null
+      approachesTried?: string | null
+      conceptsToLearn?: string | null
+      failureReason?: string | null
+    },
+  ) {
+    const existing = await this.db.problem.findFirst({
+      where: { id: problemId, userId },
+      select: { id: true },
+    })
+
+    if (!existing) {
+      return null
+    }
+
+    return this.db.problemBlocker.create({
+      data: {
+        problemId,
+        stuckPoint: data.stuckPoint,
+        approachesTried: data.approachesTried,
+        conceptsToLearn: data.conceptsToLearn,
+        failureReason: data.failureReason,
+      },
+    })
+  }
+
+  /**
+   * Manually marks a problem as mastered independently of revision completion.
+   */
+  async markMastered(id: string, userId: string): Promise<ProblemWithRelations | null> {
+    const existing = await this.db.problem.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    })
+
+    if (!existing) {
+      return null
+    }
+
+    return this.db.problem.update({
+      where: { id },
+      data: {
+        isMastered: true,
+        masteredAt: new Date(),
+        status: ProblemStatus.MASTERED,
+      },
+      include: {
+        topics: {
+          include: {
+            topic: true,
+          },
+        },
+        solutions: {
+          orderBy: { createdAt: "asc" },
+        },
+        blockers: {
+          orderBy: { createdAt: "desc" },
+        },
+        revisions: true,
+        attempts: true,
+        assessments: true,
+      },
+    })
+  }
+
+  /**
+   * Unmarks mastery, supporting later creation of fresh revision cycles without destroying historical data.
+   */
+  async unmarkMastered(id: string, userId: string): Promise<ProblemWithRelations | null> {
+    const existing = await this.db.problem.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    })
+
+    if (!existing) {
+      return null
+    }
+
+    return this.db.problem.update({
+      where: { id },
+      data: {
+        isMastered: false,
+        masteredAt: null,
+        status: ProblemStatus.LEARNING,
+      },
+      include: {
+        topics: {
+          include: {
+            topic: true,
+          },
+        },
+        solutions: {
+          orderBy: { createdAt: "asc" },
+        },
+        blockers: {
+          orderBy: { createdAt: "desc" },
         },
         revisions: true,
         attempts: true,
@@ -445,4 +738,3 @@ export class ProblemRepository extends BaseRepository {
 }
 
 export const problemRepository = new ProblemRepository()
-

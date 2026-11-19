@@ -7,6 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "npm run test:domain",
+    "test:domain": "npx tsx --conditions=react-server tests/domain-model.test.ts",
     "format": "oxfmt src",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
